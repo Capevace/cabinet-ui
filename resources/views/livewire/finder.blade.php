@@ -1,0 +1,12 @@
+<x-cabinet-filament::finder
+    :$folder
+    :$files
+    :$breadcrumbs
+    :$toolbarActions
+    :$contextMenus
+    :$selectionMode
+    :$sidebarItems
+    :$sidebarFilters
+    :$sidebarLinks
+    :$selectedSidebarItem
+/>

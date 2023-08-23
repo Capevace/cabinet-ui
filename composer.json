@@ -1,0 +1,35 @@
+{
+    "name": "capevace/cabinet-ui",
+    "description": "The UI package for Cabinet, the streamlined file management solution for Laravel.",
+    "minimum-stability": "stable",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Cabinet\\Filament\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Cabinet\\Filament\\Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Lukas Mateffy",
+            "email": "hello@mateffy.me"
+        }
+    ],
+    "require": {
+        "php": "^8.0",
+        "spatie/laravel-package-tools": "^1.15",
+        "illuminate/contracts": "^10.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Cabinet\\Filament\\CabinetFilamentServiceProvider"
+            ]
+        }
+    }
+}
