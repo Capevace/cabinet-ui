@@ -11,6 +11,7 @@ use Cabinet\Filament\Livewire\Finder\Actions\PreviewFile;
 use Cabinet\Filament\Livewire\Finder\Actions\RenameFile;
 use Cabinet\Filament\Livewire\Finder\Actions\ShareFile;
 use Cabinet\Filament\Livewire\Finder\Actions\UploadFile;
+use Cabinet\Filament\Livewire\Finder\Breadcrumb;
 use Cabinet\Filament\Livewire\Finder\ContextMenuItem;
 use Cabinet\Filament\Livewire\Finder\SidebarItem;
 use Cabinet\File;
@@ -42,8 +43,6 @@ class Finder extends Component implements HasForms, HasActions
 
     #[Locked]
     public bool $modal = true;
-
-    public ?string $selectedSidebarItemId = null;
 
     #[Locked]
 	public ?string $initialFolderId = null;
@@ -120,29 +119,9 @@ class Finder extends Component implements HasForms, HasActions
             return;
         }
 
-        if ($sidebarItem = $this->sidebarItems->first(fn (SidebarItem $item) => $item->getFolderId() === $id)) {
-            $this->folderId = $id;
-            unset($this->folder);
-            unset($this->files);
-
-            return;
-        }
-
-        if ($this->files->contains(fn (File|Folder $file) => $file instanceof Folder && $file->id === $id)) {
-            $this->folderId = $id;
-            unset($this->folder);
-            unset($this->files);
-
-            return;
-        }
-
-        if (collect($this->breadcrumbs)->contains(fn ($item, string $action) => $action === "openFolder('{$id}')")) {
-            $this->folderId = $id;
-            unset($this->folder);
-            unset($this->files);
-
-            return;
-        }
+        $this->folderId = $id;
+        unset($this->files);
+        unset($this->folder);
     }
 
     #[Computed]
@@ -165,48 +144,53 @@ class Finder extends Component implements HasForms, HasActions
     public function sidebarItems(): Collection
     {
         return collect([
-            SidebarItem::make('images')
-                ->label('Fotos')
-                ->icon('heroicon-o-photo')
-                ->folder('2534e05c-ea53-4e01-b4bf-fcf6ba76b3fd')
-                ->filterUsing(fn (Collection $files) => $files
-                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'image' || $file->type instanceof \Cabinet\Types\Folder)
-                ),
+//            SidebarItem::make('images')
+//                ->label('Fotos')
+//                ->icon('heroicon-o-photo')
+//                ->folder('2534e05c-ea53-4e01-b4bf-fcf6ba76b3fd')
+//                ->filterUsing(fn (Collection $files) => $files
+//                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'image' || $file->type instanceof \Cabinet\Types\Folder)
+//                ),
+//
+//            SidebarItem::make('videos')
+//                ->label('Videos')
+//                ->icon('heroicon-o-video-camera')
+//                ->filterUsing(fn (Collection $files) => $files
+//                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'external-video' || $file->type instanceof \Cabinet\Types\Folder)
+//                ),
+//
+//            SidebarItem::make('floorplans')
+//                ->label('Grundrisse')
+//                ->icon('heroicon-o-map')
+//                ->filterUsing(fn (Collection $files) => $files
+//                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'image' || $file->type instanceof \Cabinet\Types\Folder)
+//                ),
+//
+//            SidebarItem::make('documents')
+//                ->label('Dokumente & Zertifikate')
+//                ->icon('heroicon-o-document-text')
+//                ->filterUsing(fn (Collection $files) => $files
+//                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'image' || $file->type instanceof \Cabinet\Types\Folder)
+//                ),
+//
+//            SidebarItem::make('3d-scans')
+//                ->label('3D Scans')
+//                ->icon('heroicon-o-cube-transparent')
+//                ->filterUsing(fn (Collection $files) => $files
+//                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'indoor-scan' || $file->type instanceof \Cabinet\Types\Folder)
+//                ),
+//
+//            SidebarItem::make('live-cams')
+//                ->label('Baustellenkameras')
+//                ->icon('heroicon-o-camera')
+//                ->filterUsing(fn (Collection $files) => $files
+//                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'camera-feed' || $file->type instanceof \Cabinet\Types\Folder)
+//                ),
 
-            SidebarItem::make('videos')
-                ->label('Videos')
-                ->icon('heroicon-o-video-camera')
-                ->filterUsing(fn (Collection $files) => $files
-                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'external-video' || $file->type instanceof \Cabinet\Types\Folder)
-                ),
-
-            SidebarItem::make('floorplans')
-                ->label('Grundrisse')
-                ->icon('heroicon-o-map')
-                ->filterUsing(fn (Collection $files) => $files
-                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'image' || $file->type instanceof \Cabinet\Types\Folder)
-                ),
-
-            SidebarItem::make('documents')
-                ->label('Dokumente & Zertifikate')
-                ->icon('heroicon-o-document-text')
-                ->filterUsing(fn (Collection $files) => $files
-                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'image' || $file->type instanceof \Cabinet\Types\Folder)
-                ),
-
-            SidebarItem::make('3d-scans')
-                ->label('3D Scans')
-                ->icon('heroicon-o-cube-transparent')
-                ->filterUsing(fn (Collection $files) => $files
-                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'indoor-scan' || $file->type instanceof \Cabinet\Types\Folder)
-                ),
-
-            SidebarItem::make('live-cams')
-                ->label('Baustellenkameras')
-                ->icon('heroicon-o-camera')
-                ->filterUsing(fn (Collection $files) => $files
-                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'camera-feed' || $file->type instanceof \Cabinet\Types\Folder)
-                ),
+            SidebarItem::make('test')
+                ->label(fn () => 'test')
+                ->icon('heroicon-o-building-office')
+                ->folder('65235782-9771-4294-a5f2-314fd137ae61'),
 
             SidebarItem::make('estate')
                 ->label(fn () => $this->initialFolder?->name)
@@ -216,35 +200,47 @@ class Finder extends Component implements HasForms, HasActions
             SidebarItem::make('my-storage')
                 ->label('Meine Ablage')
                 ->icon('heroicon-o-user')
-                ->folder('0c5ba182-3d30-4b00-8c1b-4538bbcd0f35')
+                ->folder('5d877f36-db9b-4efc-9799-dc068cc41d2a')
         ]);
     }
 
     #[Computed]
     public function selectedSidebarItem(): ?SidebarItem
     {
-        return $this->sidebarItems
-            ->first(fn (SidebarItem $item) => $item->id === $this->selectedSidebarItemId);
-    }
+        $breadcrumbs = array_reverse($this->breadcrumbs);
 
-    public function selectSidebarItem(?string $id): void
-    {
-        if ($id === null) {
-            $this->selectedSidebarItemId = null;
-            unset($this->selectedSidebarItem);
-            return;
-        }
+        $selectedItem = null;
+        $closeness = null;
 
-        if ($sidebarItem = $this->sidebarItems->first(fn (SidebarItem $item) => $item->id === $id)) {
-            if ($folderId = $sidebarItem->getFolderId()) {
-                $this->openFolder($folderId);
+        // Go through the breadcrumbs and find item that's the closest to the current folder
+        // or the current folder itself
+        foreach ($this->sidebarItems as $item) {
+            $folderId = $item->getFolderId();
+
+            if ($folderId === null) {
+                continue;
             }
 
-            if ($sidebarItem->hasFilter()) {
-                $this->selectedSidebarItemId = $id;
-                unset($this->selectedSidebarItem);
+            // If the folder is the current folder, return it immediately
+            if ($folderId === $this->folderId) {
+                return $item;
+            }
+
+            // Find the closest sidebar item to the current folder
+            foreach ($breadcrumbs as $index => $breadcrumb) {
+                // If the item's folder is in the breadcrumbs and it's closer than the current closest item,
+                // set it as the closest item
+                if ($breadcrumb->folderId === $folderId && ($closeness === null || $index < $closeness)) {
+                    $closeness = $index;
+                    $selectedItem = $item;
+
+                    // We don't need to check the rest of the breadcrumbs
+                    break;
+                }
             }
         }
+
+        return $selectedItem;
     }
 
     /**
@@ -254,10 +250,6 @@ class Finder extends Component implements HasForms, HasActions
     public function files(): Collection
     {
         $files = $this->folder?->files() ?? collect();
-
-        if ($this->selectedSidebarItem !== null) {
-            return $this->selectedSidebarItem->filterFiles($files);
-        }
 
         return $files;
     }
@@ -272,13 +264,20 @@ class Finder extends Component implements HasForms, HasActions
         }
 
         $breadcrumbs = [
-            "openFolder('{$directory->id}')" => $directory->asFolder()->name,
+            new Breadcrumb(
+                folderId: $directory->id,
+                label: $directory->asFolder()->name,
+            )
         ];
 
         $directory = $directory->parentDirectory;
 
         while ($directory !== null) {
-            $breadcrumbs["openFolder('{$directory->id}')"] = $directory->asFolder()->name;
+            $breadcrumbs[] = new Breadcrumb(
+                folderId: $directory->id,
+                label: $directory->asFolder()->name,
+            );
+
             $directory = $directory->parentDirectory;
         }
 
@@ -329,13 +328,6 @@ class Finder extends Component implements HasForms, HasActions
         return PreviewFile::make('previewFile');
     }
 
-    public function getCabinetActions()
-    {
-        return [
-            Action::make('cabinetTest'),
-        ];
-    }
-
     /**
      * @return Action[]
      */
@@ -377,24 +369,25 @@ class Finder extends Component implements HasForms, HasActions
 
 	public function render()
     {
-        return view(
-            $this->modal
-                ? 'cabinet-filament::livewire.finder-modal'
-                : 'cabinet-filament::livewire.finder',
-            [
-                'folder' => $this->folder,
-                'breadcrumbs' => $this->breadcrumbs,
-                'files' => $this->files,
-                'toolbarActions' => $this->getToolbarActions(),
-                'contextMenus' => $this->contextMenus,
-                'selectionMode' => $this->selectionMode,
-                'sidebarItems' => $this->sidebarItems,
-                'sidebarFilters' => $this->sidebarItems
-                    ->filter(fn (SidebarItem $item) => $item->hasFilter()),
-                'sidebarLinks' => $this->sidebarItems
-                    ->filter(fn (SidebarItem $item) => !$item->hasFilter()),
-                'selectedSidebarItem' => $this->selectedSidebarItemId,
-            ]
-        );
+        $view = $this->modal
+            ? 'cabinet-filament::livewire.finder-modal'
+            : 'cabinet-filament::livewire.finder-page';
+
+        $data = [
+            'folder' => $this->folder,
+            'breadcrumbs' => $this->breadcrumbs,
+            'files' => $this->files,
+            'toolbarActions' => $this->getToolbarActions(),
+            'contextMenus' => $this->contextMenus,
+            'selectionMode' => $this->selectionMode,
+            'sidebarItems' => $this->sidebarItems,
+            'sidebarFilters' => $this->sidebarItems
+                ->filter(fn (SidebarItem $item) => $item->hasFilter()),
+            'sidebarLinks' => $this->sidebarItems
+                ->filter(fn (SidebarItem $item) => !$item->hasFilter()),
+            'selectedSidebarItem' => $this->selectedSidebarItem,
+        ];
+
+        return view($view, $data);
     }
 }

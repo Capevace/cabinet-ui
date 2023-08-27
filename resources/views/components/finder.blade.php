@@ -6,8 +6,6 @@
     'files' => [],
     'selectionMode' => null,
     'sidebarItems' => collect(),
-    'sidebarFilters' => collect(),
-    'sidebarLinks' => collect(),
     'selectedSidebarItem' => null,
 ])
 
@@ -48,7 +46,7 @@
         },
 
         get canSelectMore() {
-            return this.max !== null && this.selectedFiles.length < this.max;
+            return this.max === null || this.selectedFiles.length < this.max;
         },
 
 
@@ -158,43 +156,17 @@
 
     <div class="flex flex-1">
         <aside class="bg-gray-100 dark:bg-gray-900 w-64 border-r-2 border-gray-200 dark:border-gray-800 px-2 py-2">
-            @if($sidebarLinks->isNotEmpty())
+            @if($sidebarItems->isNotEmpty())
                 <p class="text-xs text-gray-500 mb-2">Orte</p>
                 <ul class="grid gap-1">
-                    @foreach($sidebarLinks as $item)
+                    @foreach($sidebarItems as $item)
+                        @if($folder === null)
+                            @dd($sidebarItems)
+                        @endif
+
                         <x-cabinet-filament::finder.sidebar-item
                             wire:key="{{ $item->id }}"
-                            :active="$item->getFolderId() === $folder->id"
-                            :$item
-                        />
-                    @endforeach
-                </ul>
-            @endif
-
-            @if($sidebarFilters->isNotEmpty())
-                @if($sidebarLinks->isNotEmpty())
-                    <hr class="dark:border-gray-700 border-gray-300 my-4" />
-                @endif
-
-                <div class="flex items-center justify-between mb-2">
-                    <p class="text-xs text-gray-500">Filter</p>
-
-                    @if($selectedSidebarItem !== null)
-                        <button
-                            type="button"
-                            wire:click="selectSidebarItem(null)"
-                            class="text-xs flex items-center space-x-1 opacity-80 hover:opacity-100 transition-opacity"
-                        >
-                            <span>Filter deaktivieren</span>
-                            @svg('heroicon-o-x-mark', 'h-4 w-4')
-                        </button>
-                    @endif
-                </div>
-                <ul class="grid gap-1">
-                    @foreach($sidebarFilters as $item)
-                        <x-cabinet-filament::finder.sidebar-item
-                            wire:key="{{ $item->id }}"
-                            :active="$item->id === $selectedSidebarItem"
+                            :active="$selectedSidebarItem?->id === $item->id"
                             :$item
                         />
                     @endforeach

@@ -17,21 +17,9 @@
     $canEdit = false;
 @endphp
 
-<x-dynamic-component
-	:component="$getFieldWrapperView()"
-	:id="$getId()"
-	:label="$getLabel()"
-	:label-sr-only="$isLabelHidden()"
-	:helper-text="$getHelperText()"
-	:hint="$getHint()"
-	:hint-actions="$getHintActions()"
-	:hint-color="$getHintColor()"
-	:hint-icon="$getHintIcon()"
-	:required="$isRequired()"
-	:state-path="$statePath"
->
+<x-dynamic-component :component="$getFieldWrapperView()" :field="$field">
     <section
-		class="@container rounded-lg border bg-white dark:border-gray-700 dark:bg-gray-800"
+		class="@container rounded-lg ring-1 ring-gray-950/10 bg-white dark:ring-white/20 dark:bg-white/5"
 		x-data="{
             state: @entangle($statePath).live,
             loading: false,
@@ -86,7 +74,7 @@
 		<header
 			class="flex items-center border-b px-2 py-2 dark:border-gray-700"
 		>
-			<div class="pl-2">
+			<div class="pl-3">
 				<h2 class="font-semibold">{{ $heading }}</h2>
 
                 @if($description)

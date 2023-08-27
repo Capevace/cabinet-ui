@@ -36,6 +36,7 @@ trait HasSelectAction
 //                    'folderId' => '1305570d-0be4-4226-b282-1a9f2f7a985e'
 //                ])
 //            )
+            ->size('sm')
             ->action(function (Component $livewire, FileInput $component) {
                 $livewire
                     ->dispatch(

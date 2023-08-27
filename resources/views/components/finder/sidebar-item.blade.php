@@ -16,7 +16,7 @@
 
     x-data="{}"
     type="button"
-    wire:click="selectSidebarItem('{{ $item->id }}')"
+    wire:click="openFolder('{{ $item->getFolderId() }}')"
 >
     <x-filament::icon
         :icon="$icon"

@@ -1,19 +1,19 @@
 <?php return array(
     'root' => array(
-        'name' => 'capevace/cabinet-filament',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => NULL,
+        'name' => 'capevace/cabinet-ui',
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => 'd5e2a875709beed718424f79e57032015991329e',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
         'dev' => true,
     ),
     'versions' => array(
-        'capevace/cabinet-filament' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => NULL,
+        'capevace/cabinet-ui' => array(
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => 'd5e2a875709beed718424f79e57032015991329e',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
