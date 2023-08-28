@@ -2,7 +2,7 @@
 
 namespace Cabinet\Filament\Components;
 
-use Cabinet\Exceptions\UnknownFileType;
+use Cabinet\Exceptions\FileTypeNotAccepted;
 use Cabinet\Facades\Cabinet;
 use Cabinet\File;
 use Cabinet\FileType;
@@ -21,6 +21,7 @@ class FileInput extends \Filament\Forms\Components\Field
     use Concerns\HasRelationship;
     use Concerns\HasRootDirectory;
     use Concerns\HasSelectAction;
+    use Concerns\HasSidebarItems;
     use Concerns\HasTooltip;
 
     protected string $view = 'cabinet-filament::components.forms.file-input';
@@ -79,7 +80,7 @@ class FileInput extends \Filament\Forms\Components\Field
             // If a type error occurred
             if (collect($validator->failed())->keys()->contains(fn ($key) => str($key)->endsWith('.type'))) {
                 $json = json_encode($validator->failed());
-                throw new UnknownFileType("Unknown file type: {$json}");
+                throw new FileTypeNotAccepted("Unknown file type: {$json}");
             }
 
             report(new Exception('Error validating files: ' . json_encode($validator->errors()->toArray(), JSON_PRETTY_PRINT)));

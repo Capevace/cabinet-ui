@@ -92,4 +92,13 @@ class SidebarItem
     {
         return $this->filter !== null;
     }
+
+    public function dto(): SidebarItemDto
+    {
+        return new SidebarItemDto(
+            id: $this->getFolderId(),
+            label: $this->getLabel(),
+            icon: $this->getIcon(),
+        );
+    }
 }

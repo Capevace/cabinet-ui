@@ -67,8 +67,7 @@
                 :$contextMenus
                 :$selectionMode
                 :$sidebarItems
-                :$sidebarFilters
-                :$sidebarLinks
+                :$acceptedTypeChecker
                 :$selectedSidebarItem
             />
         @endif

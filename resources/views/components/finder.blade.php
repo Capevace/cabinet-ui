@@ -1,5 +1,6 @@
 @props([
     'folder',
+    'acceptedTypeChecker',
     'breadcrumbs' => [],
     'contextMenus' => [],
     'toolbarActions' => [],
@@ -155,15 +156,11 @@
     </header>
 
     <div class="flex flex-1">
-        <aside class="bg-gray-100 dark:bg-gray-900 w-64 border-r-2 border-gray-200 dark:border-gray-800 px-2 py-2">
-            @if($sidebarItems->isNotEmpty())
+        @if(count($sidebarItems) > 0)
+            <aside class="bg-gray-100 dark:bg-gray-900 w-64 border-r-2 border-gray-200 dark:border-gray-800 px-2 py-2">
                 <p class="text-xs text-gray-500 mb-2">Orte</p>
                 <ul class="grid gap-1">
                     @foreach($sidebarItems as $item)
-                        @if($folder === null)
-                            @dd($sidebarItems)
-                        @endif
-
                         <x-cabinet-filament::finder.sidebar-item
                             wire:key="{{ $item->id }}"
                             :active="$selectedSidebarItem?->id === $item->id"
@@ -171,8 +168,8 @@
                         />
                     @endforeach
                 </ul>
-            @endif
-        </aside>
+            </aside>
+        @endif
 
 
         <section class="flex-1 min-h-64 flex flex-col">
@@ -205,6 +202,7 @@
             </nav>
             <main class="flex-1">
                 <x-cabinet-filament::finder.cards
+                    :$acceptedTypeChecker
                     :max="$selectionMode?->max"
                     :$files
                     :preview-action="$this->previewFileAction"

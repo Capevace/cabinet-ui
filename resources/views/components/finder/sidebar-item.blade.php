@@ -3,7 +3,6 @@
     'active' => false
 ])
 @php
-    $icon = $item->getIcon();
     $badge = null;
 @endphp
 
@@ -16,10 +15,10 @@
 
     x-data="{}"
     type="button"
-    wire:click="openFolder('{{ $item->getFolderId() }}')"
+    wire:click="openFolder('{{ $item->id }}')"
 >
     <x-filament::icon
-        :icon="$icon"
+        :icon="$item->icon"
         @class([
             'fi-sidebar-item-icon h-6 w-6',
             'text-gray-400 dark:text-gray-500' => ! $active,
@@ -30,7 +29,7 @@
     <span
         class="flex-1 truncate"
     >
-        {{ $item->getLabel() }}
+        {{ $item->label }}
     </span>
 
     @if (filled($badge))

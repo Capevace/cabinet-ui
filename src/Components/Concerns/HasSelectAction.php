@@ -42,12 +42,18 @@ trait HasSelectAction
                     ->dispatch(
                         'open',
                         folderId: $this->getRootDirectory()->id,
+                        sidebarItems: $this->getSidebarItems(),
+                        acceptedTypes: collect($component->getAcceptedTypes())
+                            ->map(fn (FileType $type) => new Finder\FileTypeDto(
+                                slug: $type->slug(),
+                                mime: method_exists($type, 'getMime')
+                                    ? $type->getMime()
+                                    : null
+                            ))
+                            ->all(),
                         mode: new Finder\SelectionMode(
                             livewireId: $livewire->getId(),
                             statePath: $component->getStatePath(),
-                            acceptedTypes: collect($component->getAcceptedTypes())
-                                ->map(fn (FileType $type) => $type->slug())
-                                ->all(),
                             max: $component->getMax(),
                         )
                     )

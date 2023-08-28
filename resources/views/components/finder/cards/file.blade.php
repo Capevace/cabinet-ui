@@ -1,20 +1,16 @@
-@props(['file', 'previewAction' => null])
+@props(['file', 'previewAction' => null, 'disabled' => false])
 
 <li
     {{ $attributes->class(['flex flex-col group border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors rounded-md overflow-hidden']) }}
     :class="{
         'ring-2 ring-primary-500': isFileSelected(@js($file->toIdentifier())),
-        'opacity-60': !canSelectMore && !isFileSelected(@js($file->toIdentifier())),
+        'opacity-60': !canSelectMore && !isFileSelected(@js($file->toIdentifier())) || {{ $disabled ? 'true' : 'false' }},
     }"
 >
     <button
         class="flex flex-col flex-1 w-full text-left"
         type="button"
-{{--        @if($previewAction)--}}
-{{--            wire:click="{{ $previewAction->getLivewireClickHandler() }}"--}}
-{{--        @endif--}}
-
-        x-bind:disabled="!canSelectMore && !isFileSelected(@js($file->toIdentifier()))"
+        x-bind:disabled="(!canSelectMore && !isFileSelected(@js($file->toIdentifier()))) || {{ $disabled ? 'true' : 'false' }}"
         @click="toggleFileSelection(@js($file->toIdentifier()))"
         @contextmenu="openContextMenu('{{ $file->type->slug() }}', $event, @js($file->toIdentifier()))"
     >

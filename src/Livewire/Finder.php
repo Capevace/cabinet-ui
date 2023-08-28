@@ -2,8 +2,8 @@
 
 namespace Cabinet\Filament\Livewire;
 
-use App\Services\Cabinet\IndoorScan;
 use Cabinet\Facades\Cabinet;
+use Cabinet\Filament\Livewire\Finder\AcceptableTypeChecker;
 use Cabinet\Filament\Livewire\Finder\Actions\CreateFolder;
 use Cabinet\Filament\Livewire\Finder\Actions\DeleteFile;
 use Cabinet\Filament\Livewire\Finder\Actions\DownloadFile;
@@ -13,7 +13,8 @@ use Cabinet\Filament\Livewire\Finder\Actions\ShareFile;
 use Cabinet\Filament\Livewire\Finder\Actions\UploadFile;
 use Cabinet\Filament\Livewire\Finder\Breadcrumb;
 use Cabinet\Filament\Livewire\Finder\ContextMenuItem;
-use Cabinet\Filament\Livewire\Finder\SidebarItem;
+use Cabinet\Filament\Livewire\Finder\FileTypeDto;
+use Cabinet\Filament\Livewire\Finder\SidebarItemDto;
 use Cabinet\File;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -25,16 +26,15 @@ use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Url;
 use Livewire\Component;
 
 use Cabinet\Folder;
 
 /**
  * @property-read Collection<File> $files
- * @property-read array $breadcrumbs
- * @property-read Collection<SidebarItem> $sidebarItems
- * @property-read SidebarItem|null $selectedSidebarItem
+ * @property-read Collection<Breadcrumb> $breadcrumbs
+ * @property-read Collection<SidebarItemDto> $sidebarItems
+ * @property-read SidebarItemDto|null $selectedSidebarItem
  */
 class Finder extends Component implements HasForms, HasActions
 {
@@ -50,12 +50,30 @@ class Finder extends Component implements HasForms, HasActions
     #[Locked]
 	public ?string $folderId = null;
 
+    /**
+     * @var SidebarItemDto[]
+     */
+    #[Locked]
+    public array $sidebarItems = [];
+
+    /**
+     * @var FileTypeDto[]
+     */
+    #[Locked]
+    public array $acceptedTypes = [];
+
 	public ?Finder\SelectionMode $selectionMode = null;
 
     public array $selectedFiles = [];
 
     #[On('open')]
-    public function open(string $folderId, ?array $mode = null)
+    public function open(
+        string $folderId,
+        ?array $mode = null,
+        array $sidebarItems = [],
+        array $selectedFiles = [],
+        array $acceptedTypes = [],
+    )
     {
         $folder = Cabinet::folder($folderId);
 
@@ -66,7 +84,17 @@ class Finder extends Component implements HasForms, HasActions
         $this->initialFolderId = $folderId;
         $this->folderId = $folderId;
 
+        $this->sidebarItems = collect($sidebarItems)
+            ->map(fn (array $item) => SidebarItemDto::fromLivewire($item))
+            ->all();
+
+        $this->acceptedTypes = collect($acceptedTypes)
+            ->map(fn (array $type) => FileTypeDto::fromLivewire($type))
+            ->filter()
+            ->all();
+
         $this->selectionMode = Finder\SelectionMode::fromLivewire($mode);
+        $this->selectedFiles = $selectedFiles;
     }
 
 //    #[On('openFinder')]
@@ -81,10 +109,12 @@ class Finder extends Component implements HasForms, HasActions
 	{
         $this->initialFolderId = null;
 		$this->folderId = null;
+        $this->sidebarItems = [];
+        $this->acceptedTypes = [];
+
 		$this->selectionMode = null;
-        $this->selectedSidebarItemId = null;
         $this->selectedFiles = [];
-	}
+    }
 
     public function confirmFileSelection()
     {
@@ -94,6 +124,7 @@ class Finder extends Component implements HasForms, HasActions
 
         $files = collect($this->selectedFiles)
             ->map(fn (array $file) => Cabinet::file($file['source'], $file['id']))
+            ->filter(fn (File $file) => $this->acceptedTypes->contains($file->type->slug()))
             //->filter(/** auth check */)
             ->filter()
             ->map(fn (File $file) => $file->toIdentifier());
@@ -187,27 +218,14 @@ class Finder extends Component implements HasForms, HasActions
 //                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'camera-feed' || $file->type instanceof \Cabinet\Types\Folder)
 //                ),
 
-            SidebarItem::make('test')
-                ->label(fn () => 'test')
-                ->icon('heroicon-o-building-office')
-                ->folder('65235782-9771-4294-a5f2-314fd137ae61'),
 
-            SidebarItem::make('estate')
-                ->label(fn () => $this->initialFolder?->name)
-                ->icon('heroicon-o-building-office')
-                ->folder($this->initialFolderId),
-
-            SidebarItem::make('my-storage')
-                ->label('Meine Ablage')
-                ->icon('heroicon-o-user')
-                ->folder('5d877f36-db9b-4efc-9799-dc068cc41d2a')
         ]);
     }
 
     #[Computed]
-    public function selectedSidebarItem(): ?SidebarItem
+    public function selectedSidebarItem(): ?SidebarItemDto
     {
-        $breadcrumbs = array_reverse($this->breadcrumbs);
+        $breadcrumbs = $this->breadcrumbs->reverse();
 
         $selectedItem = null;
         $closeness = null;
@@ -215,7 +233,7 @@ class Finder extends Component implements HasForms, HasActions
         // Go through the breadcrumbs and find item that's the closest to the current folder
         // or the current folder itself
         foreach ($this->sidebarItems as $item) {
-            $folderId = $item->getFolderId();
+            $folderId = $item->id;
 
             if ($folderId === null) {
                 continue;
@@ -255,33 +273,33 @@ class Finder extends Component implements HasForms, HasActions
     }
 
     #[Computed]
-    public function breadcrumbs(): array
+    public function breadcrumbs(): Collection
     {
         $directory = $this->folder?->findDirectoryOrFail();
 
         if ($directory === null) {
-            return [];
+            return collect();
         }
 
-        $breadcrumbs = [
+        $breadcrumbs = collect([
             new Breadcrumb(
                 folderId: $directory->id,
                 label: $directory->asFolder()->name,
             )
-        ];
+        ]);
 
         $directory = $directory->parentDirectory;
 
         while ($directory !== null) {
-            $breadcrumbs[] = new Breadcrumb(
+            $breadcrumbs->push(new Breadcrumb(
                 folderId: $directory->id,
                 label: $directory->asFolder()->name,
-            );
+            ));
 
             $directory = $directory->parentDirectory;
         }
 
-        return array_reverse($breadcrumbs);
+        return $breadcrumbs->reverse();
     }
 
     public function createFolderAction(): Action
@@ -375,16 +393,13 @@ class Finder extends Component implements HasForms, HasActions
 
         $data = [
             'folder' => $this->folder,
+            'acceptedTypeChecker' => new AcceptableTypeChecker($this->acceptedTypes),
             'breadcrumbs' => $this->breadcrumbs,
             'files' => $this->files,
             'toolbarActions' => $this->getToolbarActions(),
             'contextMenus' => $this->contextMenus,
             'selectionMode' => $this->selectionMode,
-            'sidebarItems' => $this->sidebarItems,
-            'sidebarFilters' => $this->sidebarItems
-                ->filter(fn (SidebarItem $item) => $item->hasFilter()),
-            'sidebarLinks' => $this->sidebarItems
-                ->filter(fn (SidebarItem $item) => !$item->hasFilter()),
+            'sidebarItems' => collect($this->sidebarItems),
             'selectedSidebarItem' => $this->selectedSidebarItem,
         ];
 
