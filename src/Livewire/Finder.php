@@ -172,57 +172,6 @@ class Finder extends Component implements HasForms, HasActions
     }
 
     #[Computed]
-    public function sidebarItems(): Collection
-    {
-        return collect([
-//            SidebarItem::make('images')
-//                ->label('Fotos')
-//                ->icon('heroicon-o-photo')
-//                ->folder('2534e05c-ea53-4e01-b4bf-fcf6ba76b3fd')
-//                ->filterUsing(fn (Collection $files) => $files
-//                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'image' || $file->type instanceof \Cabinet\Types\Folder)
-//                ),
-//
-//            SidebarItem::make('videos')
-//                ->label('Videos')
-//                ->icon('heroicon-o-video-camera')
-//                ->filterUsing(fn (Collection $files) => $files
-//                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'external-video' || $file->type instanceof \Cabinet\Types\Folder)
-//                ),
-//
-//            SidebarItem::make('floorplans')
-//                ->label('Grundrisse')
-//                ->icon('heroicon-o-map')
-//                ->filterUsing(fn (Collection $files) => $files
-//                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'image' || $file->type instanceof \Cabinet\Types\Folder)
-//                ),
-//
-//            SidebarItem::make('documents')
-//                ->label('Dokumente & Zertifikate')
-//                ->icon('heroicon-o-document-text')
-//                ->filterUsing(fn (Collection $files) => $files
-//                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'image' || $file->type instanceof \Cabinet\Types\Folder)
-//                ),
-//
-//            SidebarItem::make('3d-scans')
-//                ->label('3D Scans')
-//                ->icon('heroicon-o-cube-transparent')
-//                ->filterUsing(fn (Collection $files) => $files
-//                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'indoor-scan' || $file->type instanceof \Cabinet\Types\Folder)
-//                ),
-//
-//            SidebarItem::make('live-cams')
-//                ->label('Baustellenkameras')
-//                ->icon('heroicon-o-camera')
-//                ->filterUsing(fn (Collection $files) => $files
-//                    ->filter(fn (File|Folder $file) => $file->type->slug() === 'camera-feed' || $file->type instanceof \Cabinet\Types\Folder)
-//                ),
-
-
-        ]);
-    }
-
-    #[Computed]
     public function selectedSidebarItem(): ?SidebarItemDto
     {
         $breadcrumbs = $this->breadcrumbs->reverse();

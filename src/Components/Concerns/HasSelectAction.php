@@ -43,6 +43,7 @@ trait HasSelectAction
                         'open',
                         folderId: $this->getRootDirectory()->id,
                         sidebarItems: $this->getSidebarItems(),
+                        selectedFiles: $this->getFileIdentifiers()->all(),
                         acceptedTypes: collect($component->getAcceptedTypes())
                             ->map(fn (FileType $type) => new Finder\FileTypeDto(
                                 slug: $type->slug(),

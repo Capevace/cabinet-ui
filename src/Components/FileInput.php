@@ -3,6 +3,7 @@
 namespace Cabinet\Filament\Components;
 
 use Cabinet\Exceptions\FileTypeNotAccepted;
+use Cabinet\Exceptions\InvalidFileData;
 use Cabinet\Facades\Cabinet;
 use Cabinet\File;
 use Cabinet\FileType;
@@ -51,10 +52,16 @@ class FileInput extends \Filament\Forms\Components\Field
                         throw new AuthorizationException('Das Feld ist deaktiviert.');
                     }
 
-                    $component->validateAndSetFiles($files);
                     try {
-                    } catch (\Illuminate\Validation\ValidationException $e) {
-                        $component->getLivewire()->addError($statePath, $e->getMessage());
+                        $component->validateAndSetFiles($files);
+                    } catch (Exception $e) {
+                        report($e);
+
+                        Notification::make()
+                            ->title(__('cabinet::messages.cannot-select-file'))
+                            ->body(__('cabinet::messages.unknown-error'))
+                            ->danger()
+                            ->send();
                     }
                 }
             ]
@@ -83,13 +90,7 @@ class FileInput extends \Filament\Forms\Components\Field
                 throw new FileTypeNotAccepted("Unknown file type: {$json}");
             }
 
-            report(new Exception('Error validating files: ' . json_encode($validator->errors()->toArray(), JSON_PRETTY_PRINT)));
-
-            return Notification::make()
-                ->title(__('cabinet::messages.cannot-select-file'))
-                ->body(__('cabinet::messages.unknown-error'))
-                ->danger()
-                ->send();
+            throw new InvalidFileData('Error validating files: ' . json_encode($validator->errors()->toArray(), JSON_PRETTY_PRINT));
         }
 
         $files = collect($files)
@@ -103,7 +104,7 @@ class FileInput extends \Filament\Forms\Components\Field
         $statePath = $this->getStatePath();
 
         $finish = trigger('update', $livewire, $statePath, $files->first());
-//        dd($livewire, $statePath, $files, $max);
+
         if ($max === 1) {
             $this->state($files->first());
         } else if ($max <= 0 || $max === null) {
@@ -115,21 +116,28 @@ class FileInput extends \Filament\Forms\Components\Field
         $finish();
     }
 
-    public function getFiles(): Collection
+    protected function getFileIdentifiers(): Collection
     {
         $state = $this->getState();
 
-        $files = collect()
+        return collect()
             ->concat($state
+                // If state is an array and does not have a source key
+                // we assume it is a list of files
                 ? is_array($state) && !isset($state['source'])
                     ? $state
                     : [$state]
                 : []
             )
             ->filter()
-            ->map(fn (array $file) => Cabinet::file($file['source'], $file['id']))
-            ->filter();
+            ->values();
+    }
 
-        return $files;
+    public function getFiles(): Collection
+    {
+        return $this->getFileIdentifiers()
+            ->map(fn (array $file) => Cabinet::file($file['source'], $file['id']))
+            ->filter()
+            ->values();
     }
 }
