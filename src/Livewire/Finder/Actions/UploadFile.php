@@ -35,6 +35,7 @@ class UploadFile extends \Filament\Actions\Action
         $this->form([
             FileUpload::make('files')
                 ->label('Files')
+                ->multiple()
                 ->saveUploadedFileUsing(fn (Cabinet $cabinet, TemporaryUploadedFile $file) =>
                     $this->upload($cabinet, $file)
                 )
