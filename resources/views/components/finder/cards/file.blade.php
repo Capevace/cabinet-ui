@@ -33,7 +33,7 @@
             </p>
 
             <p class="text-gray-700 dark:text-gray-400 text-sm">
-                {{ $file->type->name() }}
+                {{ $file->type->label() }}
             </p>
         </div>
     </button>

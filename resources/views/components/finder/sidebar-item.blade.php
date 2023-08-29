@@ -28,6 +28,7 @@
 
     <span
         class="flex-1 truncate"
+        x-show="showSidebar"
     >
         {{ $item->label }}
     </span>

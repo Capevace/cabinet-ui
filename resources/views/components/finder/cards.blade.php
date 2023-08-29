@@ -1,7 +1,17 @@
-@props(['files', 'acceptedTypeChecker', 'previewAction' => null])
+@props(['files', 'acceptedTypeChecker', 'previewAction' => null, 'hasSidebar' => false])
+
+@php
+
+@endphp
 
 <ul
-    {{ $attributes->class(['grid grid-cols-4 px-4 py-4 gap-5']) }}
+    {{ $attributes->class([
+        'grid px-4 py-4 gap-5 overflow-y-auto',
+    ]) }}
+    :class="{
+        'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 asd': !showSidebar,
+        'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4': showSidebar
+    }"
 >
     @foreach($files as $file)
         @if ($file instanceof \Cabinet\File)

@@ -35,6 +35,9 @@ use Cabinet\Folder;
  * @property-read Collection<Breadcrumb> $breadcrumbs
  * @property-read Collection<SidebarItemDto> $sidebarItems
  * @property-read SidebarItemDto|null $selectedSidebarItem
+ * @property-read Folder|null $folder
+ * @property-read Folder|null $initialFolder
+ * @property-read AcceptableTypeChecker $acceptableTypeChecker
  */
 class Finder extends Component implements HasForms, HasActions
 {
@@ -65,6 +68,8 @@ class Finder extends Component implements HasForms, HasActions
 	public ?Finder\SelectionMode $selectionMode = null;
 
     public array $selectedFiles = [];
+
+    public bool $showSidebar = true;
 
     #[On('open')]
     public function open(
@@ -124,7 +129,7 @@ class Finder extends Component implements HasForms, HasActions
 
         $files = collect($this->selectedFiles)
             ->map(fn (array $file) => Cabinet::file($file['source'], $file['id']))
-            ->filter(fn (File $file) => $this->acceptedTypes->contains($file->type->slug()))
+            ->filter(fn (File $file) => $this->acceptableTypeChecker->isAccepted($file->type))
             //->filter(/** auth check */)
             ->filter()
             ->map(fn (File $file) => $file->toIdentifier());
@@ -334,6 +339,12 @@ class Finder extends Component implements HasForms, HasActions
             ]);
     }
 
+    #[Computed]
+    public function acceptableTypeChecker(): AcceptableTypeChecker
+    {
+        return new AcceptableTypeChecker($this->acceptedTypes);
+    }
+
 	public function render()
     {
         $view = $this->modal
@@ -342,7 +353,7 @@ class Finder extends Component implements HasForms, HasActions
 
         $data = [
             'folder' => $this->folder,
-            'acceptedTypeChecker' => new AcceptableTypeChecker($this->acceptedTypes),
+            'acceptedTypeChecker' => $this->acceptableTypeChecker,
             'breadcrumbs' => $this->breadcrumbs,
             'files' => $this->files,
             'toolbarActions' => $this->getToolbarActions(),

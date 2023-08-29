@@ -15,6 +15,7 @@
     x-data="{
         selectedFiles: @entangle('selectedFiles'),
         max: @json($selectionMode?->max ?? null),
+        showSidebar: @entangle('showSidebar'),
         previousBodyOverflow: null,
 
         init() {
@@ -124,7 +125,7 @@
         'hidden pointer-events-none' => $this->folderId === null,
         'pointer-events-auto' => $this->folderId !== null,
     ])
-    style="min-height: 500px;"
+    style="min-height: 500px; height: 90vh;"
 >
     <header class="w-full bg-gray-100 dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 py-2">
         <div>
@@ -155,10 +156,43 @@
         </nav>
     </header>
 
-    <div class="flex flex-1">
+    <div class="flex flex-1 overflow-hidden">
         @if(count($sidebarItems) > 0)
-            <aside class="bg-gray-100 dark:bg-gray-900 w-64 border-r-2 border-gray-200 dark:border-gray-800 px-2 py-2">
-                <p class="text-xs text-gray-500 mb-2">Orte</p>
+            <aside
+                wire:key="sidebar"
+                class="bg-gray-100 dark:bg-gray-900 border-r-2 border-gray-200 dark:border-gray-800 px-2 py-2"
+                :class="{
+                    'w-64': showSidebar,
+                    'w-16': !showSidebar,
+                }"
+            >
+                <header
+                    class="flex items-center mb-1.5"
+                    :class="{
+                        'space-x-2 justify-between': showSidebar,
+                        'justify-center': !showSidebar,
+                    }"
+                >
+                    <p class="text-xs text-gray-500" x-show="showSidebar">Orte</p>
+                    <figure>
+                        <x-filament::icon-button
+                            x-show="!showSidebar"
+                            icon="heroicon-o-chevron-double-right"
+                            color="gray"
+                            size="sm"
+                            @click="$wire.showSidebar = !$wire.showSidebar"
+                        />
+                        <x-filament::icon-button
+                            x-show="showSidebar"
+                            icon="heroicon-o-chevron-double-left"
+                            color="gray"
+                            size="sm"
+                            @click="$wire.showSidebar = !$wire.showSidebar"
+                        />
+                    </figure>
+
+                </header>
+
                 <ul class="grid gap-1">
                     @foreach($sidebarItems as $item)
                         <x-cabinet-filament::finder.sidebar-item
@@ -172,37 +206,55 @@
         @endif
 
 
-        <section class="flex-1 min-h-64 flex flex-col">
-            <nav class="bg-gray-100 dark:bg-gray-900 px-4 py-2 flex justify-between items-center">
+        <section class="flex-1 min-h-64 flex flex-col overflow-hidden">
+            <nav class="bg-gray-100 dark:bg-gray-900 px-4 py-2 flex items-start justify-between md:items-center flex-col md:flex-row">
                 <x-cabinet-filament::finder.breadcrumbs
                     :$breadcrumbs
                 />
 
-                <div class="flex items-center">
+                <div
+                    class="flex items-center w-full md:w-auto"
+                    :class="{
+                        'justify-end': selectedFiles.length === 0,
+                        'justify-between': selectedFiles.length > 0,
+                    }"
+                >
                     <div class="flex items-center space-x-4 text-xs mr-5" x-show="selectedFiles.length > 0">
                         <p>
                             <span x-text="selectedFiles.length"></span> files selected
                         </p>
 
+                        <x-filament::icon-button
+                            color="gray"
+                            icon="heroicon-o-x-circle"
+                            size="sm"
+                            @click="selectedFiles = []"
+                            class="block lg:hidden"
+                            tooltip="Auswahl aufheben"
+                        />
                         <x-filament::button
                             color="gray"
                             icon="heroicon-o-x-circle"
                             icon-position="after"
                             size="sm"
                             @click="selectedFiles = []"
+                            class="hidden lg:flex"
                         >
                             Auswahl aufheben
                         </x-filament::button>
                     </div>
 
-                    @foreach($toolbarActions as $action)
-                        {{ $action }}
-                    @endforeach
+                    <nav class="flex items-center">
+                        @foreach($toolbarActions as $action)
+                            {{ $action }}
+                        @endforeach
+                    </nav>
                 </div>
             </nav>
-            <main class="flex-1">
+            <main class="flex-1 overflow-y-auto">
                 <x-cabinet-filament::finder.cards
                     :$acceptedTypeChecker
+                    :has-sidebar="count($sidebarItems) > 0"
                     :max="$selectionMode?->max"
                     :$files
                     :preview-action="$this->previewFileAction"
