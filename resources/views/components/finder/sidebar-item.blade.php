@@ -12,6 +12,7 @@
         'truncate relative font-semibold text-left flex items-center justify-center gap-x-3 rounded-lg px-2 py-2 text-sm text-gray-700 outline-none transition duration-75 hover:bg-gray-100 focus:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/5 dark:focus:bg-white/5',
         'bg-gray-100 text-primary-600 dark:bg-white/5 dark:text-primary-400' => $active,
     ]) }}
+        
 
     x-data="{}"
     type="button"
