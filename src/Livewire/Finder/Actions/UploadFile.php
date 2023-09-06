@@ -10,8 +10,11 @@ use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Illuminate\Support\Arr;
 use Illuminate\Support\HtmlString;
+use League\Flysystem\UnableToCheckFileExistence;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class UploadFile extends \Filament\Actions\Action
@@ -47,19 +50,17 @@ class UploadFile extends \Filament\Actions\Action
                 ->selectablePlaceholder(false)
                 ->required(),
             Group::make([])
-                ->schema(fn (Get $get, Cabinet $cabinet) => $get('form') && ($form = $cabinet->getSourceForm($get('form')))
-                    ? match ($form) {
-                        'upload' => [
-                            FileUpload::make('files')
-                                ->label('Files')
-                                ->multiple()
-                                ->saveUploadedFileUsing(fn (Cabinet $cabinet, TemporaryUploadedFile $file) =>
-                                    $this->upload($cabinet, $file)
-                                )
-                                ->required()
-                        ],
-                        default => $form ?? []
-                    }
+                ->schema(fn (Get $get, Cabinet $cabinet, Group $component) => $get('form')
+                    ? $cabinet->getSourceForm(
+                        $get('form'),
+                        fn () => FileUpload::make('files')
+                            ->label('Dateien')
+                            ->multiple()
+                            ->saveUploadedFileUsing(fn (Cabinet $cabinet, TemporaryUploadedFile $file, Get $get) =>
+                                $this->upload($cabinet, $file, $component->getState(), $get('form'))
+                            )
+                            ->required()
+                        )
                     : []
                 )
 
@@ -132,7 +133,7 @@ class UploadFile extends \Filament\Actions\Action
         });
     }
 
-    public function upload(Cabinet $cabinet, TemporaryUploadedFile $file)
+    public function upload(Cabinet $cabinet, TemporaryUploadedFile $file, array $data, string $source)
     {
         $folder = $this->getParentFolder();
 
@@ -151,8 +152,8 @@ class UploadFile extends \Filament\Actions\Action
         }
 
         $cabinetFile = $cabinet
-            ->getSource('spatie-media')
-            ->upload($folder, $file);
+            ->getSource($source)
+            ->upload($folder, $file, Arr::except($data, ['form', 'files']));
 
         $file->delete();
 
