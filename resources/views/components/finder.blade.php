@@ -118,6 +118,25 @@
                     submenus[i].style.top = '';
                 }
             }
+        },
+
+        selectButtonLabel() {
+            let translation = null;
+
+            if (this.selectedFiles.length === 0) {
+                translation = @js(trans_choice('cabinet::actions.select-no-files', $selectionMode?->max === 1 ? 1 : 9999));
+            }
+
+            if (this.selectedFiles.length === 1) {
+                translation = @js(trans_choice('cabinet::actions.select-x-files', 1));
+            }
+
+            if (this.selectedFiles.length > 1) {
+                translation = @js(trans_choice('cabinet::actions.select-x-files', 9999));
+            }
+
+            {{-- We use :value instead of :count because we want to replace it in JS only --}}
+            return translation.replaceAll(':value', this.selectedFiles.length);
         }
     }"
     @class([
@@ -129,8 +148,8 @@
 >
     <header class="w-full bg-gray-100 dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 py-2">
         <div>
-            <h3 class="font-medium text-xl">Select file</h3>
-            <p class="text-sm text-gray-700 dark:text-gray-400">Select a file to get started with Cabinet</p>
+            <h3 class="font-medium text-lg">{{ trans_choice('cabinet::actions.select-x-files', $selectionMode?->max === 1 ? 1 : 9999) }}</h3>
+{{--            <p class="text-sm text-gray-700 dark:text-gray-400">Select a file to get started with Cabinet</p>--}}
         </div>
 
         <nav class="flex items-center space-x-5">
@@ -144,14 +163,9 @@
                 icon="heroicon-o-check"
                 icon-position="after"
                 @click="confirmFileSelection"
-                x-bind:disabled="selectedFiles.length === 0"
+{{--                x-bind:disabled="selectedFiles.length == 0"--}}
             >
-                <span x-show="selectedFiles.length === 0">
-                    No files selected
-                </span>
-                <span x-show="selectedFiles.length > 0">
-                    Select <span x-text="selectedFiles.length"></span> files
-                </span>
+                <span x-text="selectButtonLabel()"></span>
             </x-filament::button>
         </nav>
     </header>
