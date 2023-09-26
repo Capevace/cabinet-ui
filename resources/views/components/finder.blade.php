@@ -33,7 +33,7 @@
             }
 
             if (this.isFileSelected(file)) {
-                this.selectedFiles = this.selectedFiles.filter(f => f.id !== file.id && f.source !== file.source);
+                this.selectedFiles = this.selectedFiles.filter(f => f.id !== file.id || f.source !== file.source);
             } else {
                 this.selectedFiles = [...this.selectedFiles, file];
             }
@@ -137,7 +137,7 @@
 
             {{-- We use :value instead of :count because we want to replace it in JS only --}}
             return translation.replaceAll(':value', this.selectedFiles.length);
-        }
+        },
     }"
     @class([
         'border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 rounded-xl overflow-hidden flex flex-col shadow-xl',
@@ -148,7 +148,7 @@
 >
     <header class="w-full bg-gray-100 dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 py-2">
         <div>
-            <h3 class="font-medium text-lg">{{ trans_choice('cabinet::actions.select-x-files', $selectionMode?->max === 1 ? 1 : 9999) }}</h3>
+            <h3 class="font-medium text-lg">{{ trans_choice('cabinet::actions.select-file', $selectionMode?->max === 1 ? 1 : 9999) }}</h3>
 {{--            <p class="text-sm text-gray-700 dark:text-gray-400">Select a file to get started with Cabinet</p>--}}
         </div>
 

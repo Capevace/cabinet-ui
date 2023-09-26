@@ -5,6 +5,7 @@ namespace Cabinet\Filament\Livewire\Finder\Actions;
 use Cabinet\Cabinet;
 use Cabinet\Filament\Livewire\Finder\Actions\Concerns\HasFolder;
 use Cabinet\Sources\Contracts\AcceptsData;
+use Closure;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Select;
@@ -20,6 +21,9 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 class UploadFile extends \Filament\Actions\Action
 {
     use HasFolder;
+
+    protected Closure|string $uploadForm = 'spatie-media';
+
     public static function getDefaultName(): ?string
     {
         return 'uploadFile';
@@ -40,11 +44,16 @@ class UploadFile extends \Filament\Actions\Action
             'x-on:click' => new HtmlString("setTimeout(() => document.getElementById('mountedActionsData.0.name').focus(), 200)")
         ]);
 
+        $this->mountUsing(function (Form $form, self $action) {
+            $form->fill([
+                'form' => $action->getUploadForm()
+            ]);
+        });
+
         $this->form([
             Select::make('form')
                 ->hiddenLabel()
                 ->label('Art')
-                ->default('spatie-media')
                 ->live()
                 ->options(fn (Cabinet $cabinet) => $cabinet->getSourceOptions())
                 ->selectablePlaceholder(false)
@@ -158,5 +167,17 @@ class UploadFile extends \Filament\Actions\Action
         $file->delete();
 
         return $cabinetFile->slug;
+    }
+
+    public function uploadForm(Closure|string|null $form): static
+    {
+        $this->uploadForm = $form ?? $this->uploadForm;
+
+        return $this;
+    }
+
+    public function getUploadForm(): string
+    {
+        return $this->evaluate($this->uploadForm);
     }
 }

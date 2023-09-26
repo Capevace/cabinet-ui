@@ -265,7 +265,8 @@ class Finder extends Component implements HasForms, HasActions
     public function uploadFileAction(): Action
     {
         return UploadFile::make('uploadFile')
-            ->parentFolder($this->folder);
+            ->parentFolder($this->folder)
+            ->uploadForm($this->selectedSidebarItem?->uploadForm);
     }
 
     public function selectFileAction(): Action

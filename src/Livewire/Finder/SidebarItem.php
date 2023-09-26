@@ -17,6 +17,7 @@ class SidebarItem
 
     protected Closure|string|null $folderId = null;
     protected Closure|null $filter = null;
+    protected Closure|string|null $uploadForm = null;
 
     public function __construct(public readonly string $id, Closure|string|null $label = null)
     {
@@ -67,6 +68,13 @@ class SidebarItem
         return $this->evaluate($this->filter, ['files' => $files]);
     }
 
+    public function uploadForm(Closure|string|null $uploadForm): static
+    {
+        $this->uploadForm = $uploadForm;
+
+        return $this;
+    }
+
     public function getLabel(): string
     {
         return $this->evaluate($this->label);
@@ -88,6 +96,11 @@ class SidebarItem
         return $folder;
     }
 
+    public function getUploadForm(): ?string
+    {
+        return $this->evaluate($this->uploadForm);
+    }
+
     public function hasFilter(): bool
     {
         return $this->filter !== null;
@@ -99,6 +112,7 @@ class SidebarItem
             id: $this->getFolderId(),
             label: $this->getLabel(),
             icon: $this->getIcon(),
+            uploadForm: $this->getUploadForm(),
         );
     }
 }

@@ -10,6 +10,7 @@ class SidebarItemDto implements Wireable
         public readonly string $id,
         public readonly string $label,
         public readonly string $icon,
+        public readonly ?string $uploadForm = null,
     )
     {
 
@@ -21,6 +22,7 @@ class SidebarItemDto implements Wireable
             'id' => $this->id,
             'label' => $this->label,
             'icon' => $this->icon,
+            'uploadForm' => $this->uploadForm,
         ];
     }
 
@@ -30,6 +32,7 @@ class SidebarItemDto implements Wireable
             id: $value['id'],
             label: $value['label'],
             icon: $value['icon'],
+            uploadForm: $value['uploadForm'],
         );
     }
 }
