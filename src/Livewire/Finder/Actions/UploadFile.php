@@ -40,6 +40,7 @@ class UploadFile extends \Filament\Actions\Action
 
         $this->modalWidth('sm');
         $this->modalAlignment('center');
+		$this->modalSubmitActionLabel('Hochladen');
         $this->extraAttributes([
             'x-on:click' => new HtmlString("setTimeout(() => document.getElementById('mountedActionsData.0.name').focus(), 200)")
         ]);

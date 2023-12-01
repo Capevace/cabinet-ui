@@ -14,6 +14,7 @@
     wire:key="finder"
     x-data="{
         selectedFiles: @entangle('selectedFiles'),
+        selectionEnabled: false,
         max: @json($selectionMode?->max ?? null),
         showSidebar: @entangle('showSidebar'),
         previousBodyOverflow: null,
@@ -146,29 +147,31 @@
     ])
     style="min-height: 500px; height: 90vh;"
 >
-    <header class="w-full bg-gray-100 dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 py-2">
-        <div>
-            <h3 class="font-medium text-lg">{{ trans_choice('cabinet::actions.select-file', $selectionMode?->max === 1 ? 1 : 9999) }}</h3>
-{{--            <p class="text-sm text-gray-700 dark:text-gray-400">Select a file to get started with Cabinet</p>--}}
-        </div>
+    @if ($selectionMode)
+        <header class="w-full bg-gray-100 dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 py-2">
+            <div>
+                <h3 class="font-medium text-lg">{{ trans_choice('cabinet::actions.select-file', $selectionMode?->max === 1 ? 1 : 9999) }}</h3>
+    {{--            <p class="text-sm text-gray-700 dark:text-gray-400">Select a file to get started with Cabinet</p>--}}
+            </div>
 
-        <nav class="flex items-center space-x-5">
-            @if($this->selectionMode?->max)
-                <div class="text-xs flex items-center">
-                    Maximal: {{ $this->selectionMode?->max }}
-                </div>
-            @endif
+            <nav class="flex items-center space-x-5">
+                @if($this->selectionMode?->max)
+                    <div class="text-xs flex items-center">
+                        Maximal: {{ $this->selectionMode?->max }}
+                    </div>
+                @endif
 
-            <x-filament::button
-                icon="heroicon-o-check"
-                icon-position="after"
-                @click="confirmFileSelection"
-{{--                x-bind:disabled="selectedFiles.length == 0"--}}
-            >
-                <span x-text="selectButtonLabel()"></span>
-            </x-filament::button>
-        </nav>
-    </header>
+                <x-filament::button
+                    icon="heroicon-o-check"
+                    icon-position="after"
+                    @click="confirmFileSelection"
+    {{--                x-bind:disabled="selectedFiles.length == 0"--}}
+                >
+                    <span x-text="selectButtonLabel()"></span>
+                </x-filament::button>
+            </nav>
+        </header>
+    @endif
 
     <div class="flex flex-1 overflow-hidden">
         @if(count($sidebarItems) > 0)
@@ -207,7 +210,7 @@
 
                 </header>
 
-                <ul class="grid gap-1">
+                <ul class="grid gap-2">
                     @foreach($sidebarItems as $item)
                         <x-cabinet-filament::finder.sidebar-item
                             wire:key="{{ $item->id }}"
@@ -258,7 +261,7 @@
                         </x-filament::button>
                     </div>
 
-                    <nav class="flex items-center">
+                    <nav class="flex items-center gap-3">
                         @foreach($toolbarActions as $action)
                             {{ $action }}
                         @endforeach

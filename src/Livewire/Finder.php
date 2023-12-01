@@ -324,7 +324,7 @@ class Finder extends Component implements HasForms, HasActions
                         ContextMenuItem::fromAction($this->deleteAction)
                     ],
                     default => [
-                        ContextMenuItem::fromAction($this->selectFileAction),
+//                        ContextMenuItem::fromAction($this->selectFileAction),
                         ContextMenuItem::fromAction($this->previewFileAction),
                         ContextMenuItem::fromAction($this->renameAction),
                         ContextMenuItem::fromAction($this->downloadFileAction),

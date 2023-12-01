@@ -26,6 +26,7 @@ class RenameFile extends \Filament\Actions\Action
         $this->iconButton();
         $this->icon('heroicon-o-pencil-square');
 
+        $this->modalSubmitActionLabel(__('cabinet::actions.rename'));
         $this->modalWidth('sm');
         $this->modalAlignment('center');
 

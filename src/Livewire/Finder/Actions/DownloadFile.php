@@ -5,6 +5,7 @@ namespace Cabinet\Filament\Livewire\Finder\Actions;
 use Cabinet\Cabinet;
 use Cabinet\Filament\Livewire\Finder\Actions\Concerns\ValidatesFileAttributes;
 use Cabinet\Folder;
+use Carbon\Carbon;
 use Closure;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
@@ -27,7 +28,7 @@ class DownloadFile extends \Filament\Actions\Action
         $this->icon('heroicon-o-arrow-down-tray');
 
         $this->action(function (Cabinet $cabinet, array $data, array $arguments, DownloadFile $action) {
-            $action->verifyFileArguments($arguments);
+//            $action->verifyFileArguments($arguments);
 
             if ($arguments['type'] === (new \Cabinet\Types\Folder)->slug()) {
                 $action
@@ -39,7 +40,7 @@ class DownloadFile extends \Filament\Actions\Action
 
             abort_if($file === null, 404);
 
-            return $cabinet->download($file);
+            return redirect($file->url());
         });
     }
 }
