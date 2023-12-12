@@ -16,6 +16,7 @@ use Cabinet\Filament\Livewire\Finder\ContextMenuItem;
 use Cabinet\Filament\Livewire\Finder\FileTypeDto;
 use Cabinet\Filament\Livewire\Finder\SidebarItemDto;
 use Cabinet\File;
+use Cabinet\Sources\SpatieMediaSource;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
@@ -23,12 +24,14 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Collection;
+use League\Flysystem\UnableToCheckFileExistence;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
 use Cabinet\Folder;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
  * @property-read Collection<File> $files
@@ -71,6 +74,8 @@ class Finder extends Component implements HasForms, HasActions
 
     public bool $showSidebar = true;
 
+	public array $uploadedFiles = [];
+
     #[On('open')]
     public function open(
         string $folderId,
@@ -101,6 +106,29 @@ class Finder extends Component implements HasForms, HasActions
         $this->selectionMode = Finder\SelectionMode::fromLivewire($mode);
         $this->selectedFiles = $selectedFiles;
     }
+
+	public function updatedUploadedFiles()
+	{
+		$folder = $this->folder;
+		$source = Cabinet::getSource(SpatieMediaSource::TYPE);
+
+        try {
+			collect($this->uploadedFiles)
+				->filter(fn (TemporaryUploadedFile $file) => $file->exists())
+				->each(function (TemporaryUploadedFile $file) use ($folder, $source) {
+					$source->upload($folder, $file);
+
+					$file->delete();
+				});
+
+			unset($this->uploadedFiles);
+			unset($this->folder);
+			unset($this->files);
+			unset($this->breadcrumbs);
+        } catch (UnableToCheckFileExistence $exception) {
+            return null;
+        }
+	}
 
 //    #[On('openFinder')]
 //	public function openFinder(Folder $folder, ?Finder\SelectionMode $selectionMode = null)

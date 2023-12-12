@@ -1,4 +1,5 @@
 <x-cabinet-filament::finder
+	:modal="false"
     :$folder
     :$files
     :$breadcrumbs

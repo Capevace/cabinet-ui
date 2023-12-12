@@ -12,7 +12,12 @@
         'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 asd': !showSidebar,
         'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4': showSidebar
     }"
+	@dragenter="draggingFiles++; console.info('dragging files')"
+	@dragleave="draggingFiles--; console.info('not dragging files')"
+	@drop.prevent="uploadDroppedFile"
 >
+	<x-cabinet-filament::finder.upload-template />
+
     @foreach($files as $file)
         @if ($file instanceof \Cabinet\File)
             <x-cabinet-filament::finder.cards.file

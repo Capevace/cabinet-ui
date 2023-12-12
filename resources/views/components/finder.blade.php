@@ -1,4 +1,5 @@
 @props([
+	'modal' => false,
     'folder',
     'acceptedTypeChecker',
     'breadcrumbs' => [],
@@ -14,14 +15,35 @@
     wire:key="finder"
     x-data="{
         selectedFiles: @entangle('selectedFiles'),
-        selectionEnabled: false,
+        selectionEnabled: @json($selectionMode !== null),
         max: @json($selectionMode?->max ?? null),
         showSidebar: @entangle('showSidebar'),
         previousBodyOverflow: null,
 
+        draggingFiles: 0,
+        uploads: [],
+
         init() {
             this.previousBodyOverflow = document.body.style.overflow;
             document.body.style.overflow = 'hidden';
+
+			document.addEventListener('dragover', (e) => {
+				if (!this.draggingFiles) {
+					return;
+				}
+
+				e.preventDefault();
+			});
+
+			document.addEventListener('drop', (e) => {
+				if (!this.draggingFiles) {
+					return;
+				}
+
+				e.preventDefault();
+
+				console.log(e.dataTransfer.files);
+			});
         },
 
         destroy() {
@@ -29,11 +51,13 @@
         },
 
         toggleFileSelection(file) {
-            if (@json($selectionMode?->max !== null) && this.selectedFiles.length >= {{ $selectionMode?->max ?? 0 }} && !this.isFileSelected(file)) {
+        	const isSelected = this.isFileSelected(file);
+
+            if (!this.canSelectMore && !isSelected) {
                 return;
             }
 
-            if (this.isFileSelected(file)) {
+            if (isSelected) {
                 this.selectedFiles = this.selectedFiles.filter(f => f.id !== file.id || f.source !== file.source);
             } else {
                 this.selectedFiles = [...this.selectedFiles, file];
@@ -49,7 +73,7 @@
         },
 
         get canSelectMore() {
-            return this.max === null || this.selectedFiles.length < this.max;
+            return this.selectionEnabled && (this.max === null || this.selectedFiles.length < this.max);
         },
 
 
@@ -139,13 +163,71 @@
             {{-- We use :value instead of :count because we want to replace it in JS only --}}
             return translation.replaceAll(':value', this.selectedFiles.length);
         },
+
+        uploadDroppedFile(event) {
+        	console.log('wt');
+			event.preventDefault();
+			event.stopPropagation();
+
+			this.draggingFiles = false;
+
+			let files = event.dataTransfer.files;
+
+			if (files.length === 0) {
+				return;
+			}
+
+			this.uploadFiles(files);
+		},
+
+		uploadFiles(files) {
+			const uploadId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+			for (const file of files) {
+				this.uploads.push({
+					id: uploadId,
+					name: file.name,
+					progress: 0.0,
+					completed: false,
+					error: null,
+				});
+			}
+
+			this.$wire.uploadMultiple(
+				'uploadedFiles',
+				files,
+				() => {
+					this.uploads = this.uploads.filter(upload => upload.id !== uploadId);
+				},
+				(error) => {
+					this.uploads = this.uploads.map(upload => {
+						if (upload.id === uploadId) {
+							upload.error = error;
+						}
+
+						return upload;
+					});
+				},
+				(event) => {
+					this.uploads = this.uploads.map(upload => {
+						if (upload.id === uploadId) {
+							upload.progress = event.detail.progress / 100.0;
+						}
+
+						return upload;
+					});
+				}
+			);
+		},
     }"
     @class([
-        'border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 rounded-xl overflow-hidden flex flex-col shadow-xl',
+        'border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 rounded-xl overflow-hidden flex flex-col flex-1',
         'hidden pointer-events-none' => $this->folderId === null,
         'pointer-events-auto' => $this->folderId !== null,
+        'shadow-xl' => $modal,
+        'h-full' => !$modal,
     ])
-    style="min-height: 500px; height: 90vh;"
+	@style(['min-height: 500px;', 'height: 90vh;' => $modal])
 >
     @if ($selectionMode)
         <header class="w-full bg-gray-100 dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 py-2">
@@ -268,7 +350,22 @@
                     </nav>
                 </div>
             </nav>
-            <main class="flex-1 overflow-y-auto">
+            <main
+				class="relative flex-1 overflow-y-auto transition-colors"
+			>
+				<div
+					class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none bg-gray-200/50 dark:bg-gray-800/50 backdrop-blur font-medium"
+					x-show="draggingFiles > 0"
+					x-transition:enter="transition ease-out duration-150"
+					x-transition:enter-start="opacity-0"
+					x-transition:enter-end="opacity-100"
+					x-transition:leave="transition ease-in duration-150"
+					x-transition:leave-start="opacity-100"
+					x-transition:leave-end="opacity-0"
+				>
+					@svg('heroicon-o-cloud-arrow-up', 'w-20 h-20 text-gray-500 mb-5 bg-white border shadow-inner border-gray-200 rounded-full p-2')
+					<p class="filter text-gray-700 bg-gray-50 border shadow-inner border-gray-200 rounded-xl px-3 py-1">Dateien hier ablegen, um sie hochzuladen</p>
+				</div>
                 <x-cabinet-filament::finder.cards
                     :$acceptedTypeChecker
                     :has-sidebar="count($sidebarItems) > 0"

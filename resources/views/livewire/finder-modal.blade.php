@@ -60,6 +60,7 @@
     >
         @if($this->folderId)
             <x-cabinet-filament::finder
+				:modal="true"
                 :$folder
                 :$files
                 :$breadcrumbs
