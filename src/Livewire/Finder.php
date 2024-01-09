@@ -8,6 +8,7 @@ use Cabinet\Filament\Livewire\Finder\Actions\CreateFolder;
 use Cabinet\Filament\Livewire\Finder\Actions\DeleteFile;
 use Cabinet\Filament\Livewire\Finder\Actions\DownloadFile;
 use Cabinet\Filament\Livewire\Finder\Actions\PreviewFile;
+use Cabinet\Filament\Livewire\Finder\Actions\RefreshFile;
 use Cabinet\Filament\Livewire\Finder\Actions\RenameFile;
 use Cabinet\Filament\Livewire\Finder\Actions\ShareFile;
 use Cabinet\Filament\Livewire\Finder\Actions\UploadFile;
@@ -89,8 +90,6 @@ class Finder extends Component implements HasForms, HasActions
 
         abort_if($folder === null, 404);
 
-//        abort_if(! $folder->canViewFiles(), 403);
-
         $this->initialFolderId = $folderId;
         $this->folderId = $folderId;
 
@@ -158,7 +157,7 @@ class Finder extends Component implements HasForms, HasActions
         $files = collect($this->selectedFiles)
             ->map(fn (array $file) => Cabinet::file($file['source'], $file['id']))
             ->filter(fn (File $file) => $this->acceptableTypeChecker->isAccepted($file->type))
-            //->filter(/** auth check */)
+            //->filter(/** TODO: fine-grained auth check */)
             ->filter()
             ->map(fn (File $file) => $file->toIdentifier());
 
@@ -329,6 +328,11 @@ class Finder extends Component implements HasForms, HasActions
         return PreviewFile::make('previewFile');
     }
 
+    public function refreshFileAction(): Action
+    {
+        return RefreshFile::make('refreshFile');
+    }
+
     /**
      * @return Action[]
      */
@@ -349,14 +353,17 @@ class Finder extends Component implements HasForms, HasActions
                 $file->type->slug() => match ($file->type::class) {
                     \Cabinet\Types\Folder::class => [
                         ContextMenuItem::fromAction($this->renameAction),
+//                        ContextMenuItem::fromAction($this->refreshFileAction),
                         ContextMenuItem::fromAction($this->deleteAction)
                     ],
                     default => [
 //                        ContextMenuItem::fromAction($this->selectFileAction),
+                    
                         ContextMenuItem::fromAction($this->previewFileAction),
                         ContextMenuItem::fromAction($this->renameAction),
                         ContextMenuItem::fromAction($this->downloadFileAction),
                         ContextMenuItem::fromAction($this->shareFileAction),
+                        ContextMenuItem::fromAction($this->refreshFileAction),
                         ContextMenuItem::fromAction($this->deleteAction)
                     ]
                 }
