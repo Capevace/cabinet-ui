@@ -9,6 +9,7 @@
     'selectionMode' => null,
     'sidebarItems' => collect(),
     'selectedSidebarItem' => null,
+    'replaceableThumbnailUrl' => null
 ])
 
 <article
@@ -318,10 +319,52 @@
                         'justify-between': selectedFiles.length > 0,
                     }"
                 >
-                    <div class="flex items-center space-x-4 text-xs mr-5" x-show="selectedFiles.length > 0">
-                        <p>
-                            <span x-text="selectedFiles.length"></span> files selected
-                        </p>
+                    <?php
+                        $fileNames = $files->mapWithKeys(fn (\Cabinet\File $file) => ["{$file->source}-{$file->id}" => $file->name]);
+                    ?>
+                    <div
+                        class="flex items-center space-x-4 text-xs mr-5"
+                        x-show="selectedFiles.length > 0"
+                        x-data="{
+                            makeThumbnailUrl(file) {
+                            	console.log(file);
+                                return '{{ $replaceableThumbnailUrl }}'
+                                    .replaceAll('REPLACE_SOURCE', file.source)
+                                    .replaceAll('REPLACE_ID', file.id);
+                            }
+                        }"
+                    >
+                        <x-filament::dropdown>
+                            <x-slot:trigger>
+                                <x-filament::link url="#">
+                                    <span x-text="selectedFiles.length"></span> ausgewählt
+                                </x-filament::link>
+                            </x-slot:trigger>
+
+                            <x-filament::dropdown.list>
+                                <template x-for="file in selectedFiles">
+                                    <div
+                                        class="flex items-center gap-3 px-1 py-1"
+                                        :wire:key="`${file.source}-${file.id}`"
+                                        :key="`${file.source}-${file.id}`"
+                                    >
+                                        <img
+                                            :src="makeThumbnailUrl(file)"
+                                            class="w-6 aspect-square object-cover object-center rounded flex-shrink-0"
+                                        />
+                                        <p class="block flex-1 truncate" x-text="file.name"></p>
+
+                                        <x-filament::icon-button
+                                            icon="heroicon-o-x-mark"
+                                            class="flex-shrink-0 mx-0"
+                                            size="xs"
+                                            color="gray"
+                                            @click.prevent="toggleFileSelection(file)"
+                                        />
+                                    </div>
+                                </template>
+                            </x-filament::dropdown.list>
+                        </x-filament::dropdown>
 
                         <x-filament::icon-button
                             color="gray"
@@ -351,7 +394,7 @@
                 </div>
             </nav>
             <main
-				class="relative flex-1 overflow-y-auto transition-colors"
+				class="relative flex-1 overflow-y-auto transition-colors flex flex-col"
 			>
 				<div
 					class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none bg-gray-200/50 dark:bg-gray-800/50 backdrop-blur font-medium"
@@ -366,6 +409,7 @@
 					@svg('heroicon-o-cloud-arrow-up', 'w-20 h-20 text-gray-500 mb-5 bg-white border shadow-inner border-gray-200 rounded-full p-2')
 					<p class="filter text-gray-700 bg-gray-50 border shadow-inner border-gray-200 rounded-xl px-3 py-1">Dateien hier ablegen, um sie hochzuladen</p>
 				</div>
+
                 <x-cabinet-filament::finder.cards
                     :$acceptedTypeChecker
                     :has-sidebar="count($sidebarItems) > 0"

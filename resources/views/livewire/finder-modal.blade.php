@@ -4,6 +4,7 @@
         'fixed overscroll-contain inset-0 flex items-center justify-center z-40 px-10',
         'bg-gray-500/70 dark:bg-gray-900/70 backdrop-blur' => $this->folderId !== null,
         'pointer-events-none' => $this->folderId === null,
+        'cursor-pointer' => $this->folderId !== null,
     ])
     @click.self="$wire.closeFinder()"
     x-show="open"
@@ -70,6 +71,7 @@
                 :$sidebarItems
                 :$acceptedTypeChecker
                 :$selectedSidebarItem
+                :$replaceableThumbnailUrl
             />
         @endif
     </div>

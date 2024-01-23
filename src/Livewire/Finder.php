@@ -170,6 +170,13 @@ class Finder extends Component implements HasForms, HasActions
             files: $files->all(),
         );
 
+		$this->dispatch(
+            "cabinet:file-input:confirm",
+			livewireId: $livewireId,
+            statePath: $this->selectionMode->statePath,
+            files: $files->all(),
+        );
+
         $this->closeFinder();
     }
 
@@ -381,6 +388,31 @@ class Finder extends Component implements HasForms, HasActions
         return new AcceptableTypeChecker($this->acceptedTypes);
     }
 
+    /**
+     * This URL can be used to load images in a more performant way, if you're using
+     * S3 as your file backend. Normally signed URLs are used to load images, but
+     * these will not be cached by the browser properly.
+     *
+     * All you need to do is create your own 'cabinet.files.thumbnail' route and
+     * return the Image / URL (redirect to S3) from there. If you set Cache-Control
+     * headers on this route properly, the redirect will be cached by the browser.
+     */
+    #[Computed]
+    public function replaceableThumbnailUrl(): ?string
+    {
+        // check if the 'api.media.v1.cabinet.thumbnail' route exists
+        // if it does, return the url
+
+        if (app('router')->has('cabinet.files.thumbnail')) {
+            return route('cabinet.files.thumbnail', [
+                'source' => 'REPLACE_SOURCE',
+                'id' => 'REPLACE_ID',
+            ]);
+        }
+
+        return null;
+    }
+
 	public function render()
     {
         $view = $this->modal
@@ -397,6 +429,7 @@ class Finder extends Component implements HasForms, HasActions
             'selectionMode' => $this->selectionMode,
             'sidebarItems' => collect($this->sidebarItems),
             'selectedSidebarItem' => $this->selectedSidebarItem,
+            'replaceableThumbnailUrl' => $this->replaceableThumbnailUrl,
         ];
 
         return view($view, $data);

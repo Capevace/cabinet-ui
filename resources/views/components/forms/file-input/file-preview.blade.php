@@ -1,7 +1,7 @@
 @props(['file', 'disableDelete' => false])
 
 <div
-    {{ $attributes->class("relative w-32 h-32 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 aspect-square rounded-lg overflow-hidden group") }}
+    {{ $attributes->class("relative w-full dark:bg-gray-900 border border-gray-300 dark:border-gray-700 aspect-video !aspect-4-3 rounded-lg overflow-hidden group") }}
 >
     @unless ($disableDelete)
         <button
@@ -15,17 +15,17 @@
 
 
     <div
-		class="w-full h-full flex items-center justify-center bg-cover bg-center"
-		style="background-image: url('{{ $file->previewUrl }}');"
+		class="w-full h-full flex items-center justify-center"
 	>
         @if(!filled($file->previewUrl))
-{{--            <img--}}
-{{--                src="{{ $file->previewUrl }}"--}}
-{{--                alt="{{ $file->name }}"--}}
-{{--                loading="lazy"--}}
-{{--                class="w-full h-full object-center object-contain"--}}
-{{--            />--}}
             @svg($file->icon ?? $file->type->icon(), 'w-20 h-20 text-gray-500')
+		@else
+            <img
+                src="{{ $file->previewUrl }}"
+                alt="{{ $file->name }}"
+                loading="lazy"
+                class="w-full h-full object-center object-cover"
+            />
         @endif
     </div>
 

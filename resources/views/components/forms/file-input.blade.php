@@ -103,11 +103,12 @@
 
         <div
             @class([
-                'grid gap-4 p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 grid-cols-2 @xs:!grid-cols-2 @sm:!grid-cols-3 @md:!grid-cols-3 @lg:!grid-cols-4 @2xl:!grid-cols-5 @4xl:!grid-cols-6 @5xl:!grid-cols-7',
+//                '@xs:!grid-cols-2 @sm:!grid-cols-2 @md:!grid-cols-2 @lg:!grid-cols-3 @2xl:!grid-cols-4 @4xl:!grid-cols-5 @5xl:!grid-cols-6',
+                'grid gap-4 p-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
             ])
         >
             @foreach($getFiles() as $file)
-                <x-cabinet-filament::file-input.file-preview
+                <x-cabinet-filament::forms.file-input.file-preview
                     :wire:key="$file->uniqueId()"
                     :file="$file"
                     :disable-delete="!$canEdit"
