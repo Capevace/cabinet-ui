@@ -345,7 +345,7 @@
                                 <template x-for="file in selectedFiles">
                                     <div
                                         class="flex items-center gap-3 px-1 py-1"
-                                        :wire:key="`${file.source}-${file.id}`"
+                                        x-bind:wire:key="`${file.source}-${file.id}`"
                                         :key="`${file.source}-${file.id}`"
                                     >
                                         <img
