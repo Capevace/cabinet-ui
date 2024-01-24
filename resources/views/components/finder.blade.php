@@ -320,7 +320,7 @@
                     }"
                 >
                     <?php
-                        $fileNames = $files->mapWithKeys(fn (\Cabinet\File $file) => ["{$file->source}-{$file->id}" => $file->name]);
+                        $fileNames = $files->mapWithKeys(fn (\Cabinet\File|\Cabinet\Folder $fileOrFolder) => ["{$fileOrFolder->source}-{$fileOrFolder->id}" => $fileOrFolder->name]);
                     ?>
                     <div
                         class="flex items-center space-x-4 text-xs mr-5"
