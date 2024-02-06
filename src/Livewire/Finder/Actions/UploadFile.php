@@ -4,6 +4,7 @@ namespace Cabinet\Filament\Livewire\Finder\Actions;
 
 use Cabinet\Cabinet;
 use Cabinet\Filament\Livewire\Finder\Actions\Concerns\HasFolder;
+use Cabinet\FileType;
 use Cabinet\Sources\Contracts\AcceptsData;
 use Closure;
 use Filament\Forms\Components\FileUpload;
@@ -59,66 +60,25 @@ class UploadFile extends \Filament\Actions\Action
                 ->options(fn (Cabinet $cabinet) => $cabinet->getSourceOptions())
                 ->selectablePlaceholder(false)
                 ->required(),
-            Group::make([])
+            Group::make()
                 ->schema(fn (Get $get, Cabinet $cabinet, Group $component) => $get('form')
                     ? $cabinet->getSourceForm(
-                        $get('form'),
-                        fn () => FileUpload::make('files')
+                        sourceName: $get('form'),
+                        fileUploadComponent: fn () => FileUpload::make('files')
                             ->label('Dateien')
                             ->multiple()
+                            ->required()
+                            ->acceptedFileTypes(fn (Cabinet $cabinet) =>
+								$cabinet
+                                    ->validFileTypes()
+									->flatMap(fn (FileType $type) => $type::supportedMimeTypes())
+							)
                             ->saveUploadedFileUsing(fn (Cabinet $cabinet, TemporaryUploadedFile $file, Get $get) =>
                                 $this->upload($cabinet, $file, $component->getState(), $get('form'))
                             )
-                            ->required()
                         )
                     : []
                 )
-
-//            match ($get('form')) {
-//                    'spatie-media' => [
-//                        FileUpload::make('files')
-//                            ->label('Files')
-//                            ->multiple()
-//                            ->saveUploadedFileUsing(fn (Cabinet $cabinet, TemporaryUploadedFile $file) =>
-//                                $this->upload($cabinet, $file)
-//                            )
-//                            ->required()
-//                    ],
-//                    'youtube' => [
-//                        TextInput::make('url')
-//                            ->label('YouTube URL')
-//                            ->placeholder('https://www.youtube.com/watch?v=...')
-//                            ->url()
-//                            ->helperText('YouTube URL einfügen')
-//                            ->required()
-//                    ],
-//                    'matterport' => [
-//                        TextInput::make('name')
-//                            ->label('Name')
-//                            ->placeholder('z.B. 2. Stockwerk')
-//                            ->maxLength(255)
-//                            ->required(),
-//                        TextInput::make('url')
-//                            ->label('Matterport URL')
-//                            ->placeholder('https://my.matterport.com/show/?m=...')
-//                            ->url()
-//                            ->helperText('Matterport URL einfügen')
-//                            ->required()
-//                    ],
-//                    'camera-feed' => [
-//                        TextInput::make('name')
-//                            ->label('Name')
-//                            ->placeholder('z.B. Kranansicht Osten')
-//                            ->maxLength(255)
-//                            ->required(),
-//                        TextInput::make('url')
-//                            ->label('Kamera-URL')
-//                            ->placeholder('https://...')
-//                            ->url()
-//                            ->helperText('Kamera-URL einfügen')
-//                            ->required()
-//                    ],
-//                }
         ]);
 
         $this->action(function (Cabinet $cabinet, array $data, UploadFile $action) {
@@ -137,27 +97,29 @@ class UploadFile extends \Filament\Actions\Action
                  * @var AcceptsData $source
                  */
                 $source->add($folder, $data);
-            }
 
-            $action->success();
+                $action->success();
+            } else {
+                throw new \Exception("The source {$form} does not accept data.");
+            }
         });
     }
 
     public function upload(Cabinet $cabinet, TemporaryUploadedFile $file, array $data, string $source)
     {
-        $folder = $this->getParentFolder();
-
-        if (!$folder) {
-            $file->delete();
-
-            return null;
-        }
-
         try {
             if (!$file->exists()) {
                 return null;
             }
         } catch (UnableToCheckFileExistence $exception) {
+            return null;
+        }
+
+        $folder = $this->getParentFolder();
+
+        if (!$folder) {
+            $file->delete();
+
             return null;
         }
 

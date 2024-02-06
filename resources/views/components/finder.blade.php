@@ -166,7 +166,6 @@
         },
 
         uploadDroppedFile(event) {
-        	console.log('wt');
 			event.preventDefault();
 			event.stopPropagation();
 
@@ -307,7 +306,7 @@
 
 
         <section class="flex-1 min-h-64 flex flex-col overflow-hidden">
-            <nav class="bg-gray-100 dark:bg-gray-900 px-4 py-2 flex items-start justify-between md:items-center flex-col md:flex-row">
+            <nav class="bg-gray-100 dark:bg-gray-900 px-4 py-2 h-12 flex items-start justify-between md:items-center flex-col md:flex-row">
                 <x-cabinet-filament::finder.breadcrumbs
                     :$breadcrumbs
                 />
@@ -346,7 +345,7 @@
                                     <div
                                         class="flex items-center gap-3 px-1 py-1"
                                         x-bind:wire:key="`${file.source}-${file.id}`"
-                                        :key="`${file.source}-${file.id}`"
+                                        x-bind:key="`${file.source}-${file.id}`"
                                     >
                                         <img
                                             :src="makeThumbnailUrl(file)"

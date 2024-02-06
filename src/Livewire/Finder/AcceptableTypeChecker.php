@@ -14,13 +14,14 @@ class AcceptableTypeChecker
     public readonly Collection $acceptableTypes;
     public function __construct(
         /**
-         * @var FileTypeDto[]
+         * @var FileType[]|Collection<FileType>
          */
-        array $acceptableTypes,
+        Collection|array $acceptableTypes,
     )
     {
-        $this->acceptableTypes = collect($acceptableTypes)
-            ->map(fn (FileTypeDto $type) => $type->toFileType());
+        $this->acceptableTypes = $acceptableTypes instanceof Collection
+            ? $acceptableTypes
+            : collect($acceptableTypes);
     }
 
     /**

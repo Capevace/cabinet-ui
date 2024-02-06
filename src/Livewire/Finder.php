@@ -17,12 +17,15 @@ use Cabinet\Filament\Livewire\Finder\ContextMenuItem;
 use Cabinet\Filament\Livewire\Finder\FileTypeDto;
 use Cabinet\Filament\Livewire\Finder\SidebarItemDto;
 use Cabinet\File;
+use Cabinet\FileType;
 use Cabinet\Sources\SpatieMediaSource;
+use Cabinet\Types\Other;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
+use Filament\Notifications\Notification;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Collection;
 use League\Flysystem\UnableToCheckFileExistence;
@@ -110,22 +113,77 @@ class Finder extends Component implements HasForms, HasActions
 	{
 		$folder = $this->folder;
 		$source = Cabinet::getSource(SpatieMediaSource::TYPE);
+        $files = collect($this->uploadedFiles)
+            // Make sure the file exists
+            ->filter(fn (TemporaryUploadedFile $file) => $file->exists());
+
+        if ($files->isEmpty()) {
+            Notification::make()
+                ->danger()
+                ->title(__('cabinet::messages.no-files-uploaded'))
+                ->send();
+
+            return;
+        }
 
         try {
-			collect($this->uploadedFiles)
-				->filter(fn (TemporaryUploadedFile $file) => $file->exists())
+            $invalidFiles = $files
+                ->filter(function (TemporaryUploadedFile $file) {
+                    $type = Cabinet::determineFileTypeFromMime($file->getMimeType());
+
+                    return $this->globalAcceptableTypeChecker->isAccepted($type) === false;
+                });
+
+            $validFiles = $files->diff($invalidFiles);
+
+            if ($invalidFiles->isNotEmpty()) {
+                $names = $invalidFiles
+                    ->map(fn (TemporaryUploadedFile $file) => $file->getClientOriginalName());
+
+                // If there are more than 3 files, only show the first 3 and add an ellipsis
+                if ($names->count() > 3) {
+                    $names = $names->take(3)->push('...');
+                }
+
+                Notification::make()
+                    ->warning()
+                    ->title(trans_choice('cabinet::messages.invalid-file-types', $invalidFiles->count()))
+                    ->body($names->join(', '))
+                    ->send();
+
+                // Delete the temporary files
+                $invalidFiles->each->delete();
+            }
+
+			$validFiles
+                // Upload the file
 				->each(function (TemporaryUploadedFile $file) use ($folder, $source) {
 					$source->upload($folder, $file);
 
+                    // Delete the file from the uploads directory, now that it's been uploaded to destination
 					$file->delete();
 				});
+
+            $skippedFilesText = $invalidFiles->count() > 0
+                ? trans_choice('cabinet::messages.files-skipped', $invalidFiles->count())
+                : null;
+
+            Notification::make()
+                ->success()
+                ->title(trans_choice('cabinet::messages.files-uploaded-successfully', $validFiles->count()))
+                ->body($skippedFilesText)
+                ->send();
 
 			unset($this->uploadedFiles);
 			unset($this->folder);
 			unset($this->files);
 			unset($this->breadcrumbs);
         } catch (UnableToCheckFileExistence $exception) {
-            return null;
+            Notification::make()
+                ->danger()
+                ->title(__('cabinet::messages.unknown-error'))
+                ->body(app()->hasDebugModeEnabled() ? $$exception->getMessage() : null)
+                ->send();
         }
 	}
 
@@ -360,12 +418,9 @@ class Finder extends Component implements HasForms, HasActions
                 $file->type->slug() => match ($file->type::class) {
                     \Cabinet\Types\Folder::class => [
                         ContextMenuItem::fromAction($this->renameAction),
-//                        ContextMenuItem::fromAction($this->refreshFileAction),
                         ContextMenuItem::fromAction($this->deleteAction)
                     ],
                     default => [
-//                        ContextMenuItem::fromAction($this->selectFileAction),
-
                         ContextMenuItem::fromAction($this->previewFileAction),
                         ContextMenuItem::fromAction($this->renameAction),
                         ContextMenuItem::fromAction($this->downloadFileAction),
@@ -385,7 +440,19 @@ class Finder extends Component implements HasForms, HasActions
     #[Computed]
     public function acceptableTypeChecker(): AcceptableTypeChecker
     {
-        return new AcceptableTypeChecker($this->acceptedTypes);
+        return new AcceptableTypeChecker(
+            acceptableTypes: collect($this->acceptedTypes)
+                ->map(fn (FileTypeDto $type) => $type->toFileType())
+        );
+    }
+
+    #[Computed]
+    public function globalAcceptableTypeChecker(): AcceptableTypeChecker
+    {
+        $types = Cabinet::validFileTypes()
+            ->filter(fn (FileType $type) => !($type instanceof Other));
+
+        return new AcceptableTypeChecker($types);
     }
 
     /**
