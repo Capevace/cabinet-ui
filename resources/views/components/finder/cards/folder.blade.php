@@ -6,7 +6,6 @@
     <button
         wire:click.prevent="openFolder('{{ $folder->id }}')"
         type="button"
-        href="#"
         class="flex flex-col flex-1 w-full text-left"
         @contextmenu="openContextMenu('{{ $folder->type->slug() }}', $event, @js($folder->toIdentifier()))"
     >

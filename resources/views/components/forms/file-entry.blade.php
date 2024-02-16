@@ -29,7 +29,7 @@
     <section
 		class="@container rounded-lg ring-1 ring-gray-950/10 bg-white dark:ring-white/20 dark:bg-white/5"
 		x-data="{
-            state: @entangle($statePath).live,
+            state: @js($getState()),
             loading: false,
 
             confirmSelection(data) {
@@ -68,18 +68,14 @@
 
             // Helper so we can use the same template for single and multiple files
             get files() {
+
                 @if ($multiple)
                     return this.state ?? [];
                 @else
                     return this.state ? [this.state] : [];
                 @endif
-            },
 
-            get hasNoFiles() {
-                const weirdEdgeCase = this.files.length === 1 && Array.isArray(this.files[0]) && this.files[0].length === 0;
-
-                return this.files.length === 0 || weirdEdgeCase;
-            },
+            }
         }"
         @cabinet:file-input:{{  $getLivewire()->getId() }}:confirm.window="confirmSelection($event.detail)"
     >
@@ -116,12 +112,11 @@
         <div
             @class([
 //                '@xs:!grid-cols-2 @sm:!grid-cols-2 @md:!grid-cols-2 @lg:!grid-cols-3 @2xl:!grid-cols-4 @4xl:!grid-cols-5 @5xl:!grid-cols-6',
-//                'grid gap-4 p-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
                 'flex flex-col gap-4 p-4',
             ])
         >
             @foreach($getFiles() as $file)
-                <x-cabinet-filament::forms.file-input.file-preview-list
+                <x-cabinet-filament::forms.file-entry.file-preview
                     :wire:key="$file->uniqueId()"
                     :file="$file"
                     :disable-delete="!$canEdit"
@@ -129,9 +124,8 @@
             @endforeach
         </div>
 
-        {{-- Files selected --}}
         {{-- No files selected --}}
-        <template x-if="hasNoFiles">
+        <template x-if="files.length === 0">
             <div class="flex flex-col items-center justify-center min-h-40 py-5">
                 <x-icon :name="$getEmptyStateIcon()" class="w-20 h-20 text-gray-400" />
 

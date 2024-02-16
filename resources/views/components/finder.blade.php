@@ -307,9 +307,7 @@
 
         <section class="flex-1 min-h-64 flex flex-col overflow-hidden">
             <nav class="bg-gray-100 dark:bg-gray-900 px-4 py-2 h-12 flex items-start justify-between md:items-center flex-col md:flex-row">
-                <x-cabinet-filament::finder.breadcrumbs
-                    :$breadcrumbs
-                />
+                <x-cabinet-filament::finder.breadcrumbs :$breadcrumbs />
 
                 <div
                     class="flex items-center w-full md:w-auto"

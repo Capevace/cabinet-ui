@@ -2,18 +2,21 @@
 
 namespace Cabinet\Filament\Components\Concerns;
 
+use Cabinet\Filament\Components\FileEntry;
 use Cabinet\Filament\Components\FileInput;
 use Cabinet\Filament\Livewire\Finder;
 use Cabinet\Filament\Livewire\FinderModal;
 use Cabinet\FileType;
-use Filament\Forms\Components\Actions\Action;
+use Filament\Forms\Components\Actions\Action as FormAction;
+use Filament\Infolists\Components\Actions\Action as InfolistAction;
+use Illuminate\Support\HtmlString;
 use Livewire\Component;
 
 trait HasSelectAction
 {
-	protected \Closure|Action $selectAction;
+	protected \Closure|FormAction|InfolistAction|null $selectAction = null;
 
-    public function selectAction(\Closure|Action $selectAction): static
+    public function selectAction(\Closure|FormAction|InfolistAction $selectAction): static
     {
         $this->selectAction = $selectAction;
 
@@ -22,14 +25,24 @@ trait HasSelectAction
         return $this;
     }
 
-    public function getSelectAction(): Action
+    public function getSelectAction(): FormAction|InfolistAction|null
     {
         return $this->evaluate($this->selectAction);
     }
 
-    public function makeSelectAction(): Action
+    /**
+     * @param 'form'|'infolist' $type
+     */
+    public function makeSelectAction(string $type = 'form'): FormAction|InfolistAction
     {
-        return Action::make('select')
+        $class = match ($type) {
+            'form' => FormAction::class,
+            'infolist' => InfolistAction::class,
+            default => throw new \Exception("Unknown action type: $type")
+        };
+
+
+        return $class::make('select')
             ->label(fn () => trans_choice('cabinet::actions.select-file', $this->getMax() ?? 9999))
 //            ->modalContent(
 //                view('cabinet-filament::modal-test', [
@@ -37,7 +50,10 @@ trait HasSelectAction
 //                ])
 //            )
             ->size('sm')
-            ->action(function (Component $livewire, FileInput $component) {
+            ->extraAttributes(fn (FormAction|InfolistAction $action) => [
+                'wire:click.hover' => new HtmlString($action->getLivewireClickHandler())
+            ])
+            ->action(function (Component $livewire, FileInput|FileEntry $component) {
                 $livewire
                     ->dispatch(
                         'open',

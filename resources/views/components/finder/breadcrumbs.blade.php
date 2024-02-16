@@ -21,14 +21,14 @@
                         ])
                     />
 
-                    <x-filament::icon
-                        :alias="$iconAlias"
-                        icon="heroicon-m-chevron-left"
-                        @class([
-                            $iconClasses,
-                            'ltr:hidden',
-                        ])
-                    />
+{{--                    <x-filament::icon--}}
+{{--                        :alias="$iconAlias"--}}
+{{--                        icon="heroicon-m-chevron-left"--}}
+{{--                        @class([--}}
+{{--                            $iconClasses,--}}
+{{--                            'ltr:hidden',--}}
+{{--                        ])--}}
+{{--                    />--}}
                 @endif
 
                 <button
