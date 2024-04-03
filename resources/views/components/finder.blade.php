@@ -65,6 +65,20 @@
             }
         },
 
+        repositionFileInSelection(file, newIndex) {
+            const index = this.selectedFiles.findIndex(f => f.id === file.id && f.source === file.source);
+
+            if (index === -1) {
+                return;
+            }
+
+            const files = [...this.selectedFiles];
+            const [removed] = files.splice(index, 1);
+            files.splice(newIndex, 0, removed);
+
+            this.selectedFiles = files;
+        },
+
         isFileSelected(file) {
             return this.selectedFiles.some(f => f.id === file.id && f.source === file.source);
         },

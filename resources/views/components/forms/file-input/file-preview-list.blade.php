@@ -3,6 +3,7 @@
 <div
     {{ $attributes->class("relative w-full flex gap-5 items-center") }}
 >
+    @svg('heroicon-o-bars-3', 'w-6 h-6 text-gray-500 dark:text-gray-400 cursor-pointer drag-handle')
     <div
 		class="w-20 flex items-center justify-center rounded-md overflow-hidden flex-shrink-0"
         style="aspect-ratio: 4/3"

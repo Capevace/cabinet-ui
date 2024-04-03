@@ -80,6 +80,10 @@
 
                 return this.files.length === 0 || weirdEdgeCase;
             },
+
+            moveFiles(from, to) {
+                this.$wire.dispatchFormEvent('fileInput:reorder', '{{ $statePath }}', { from, to });
+            }
         }"
         @cabinet:file-input:{{  $getLivewire()->getId() }}:confirm.window="confirmSelection($event.detail)"
     >
@@ -119,12 +123,17 @@
 //                'grid gap-4 p-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
                 'flex flex-col gap-4 p-4',
             ])
+            x-data="{}"
+            x-sortable
+            x-on:end="moveFiles($event.oldIndex, $event.newIndex)"
         >
-            @foreach($getFiles() as $file)
+            @foreach($getFiles() as $index => $file)
                 <x-cabinet-filament::forms.file-input.file-preview-list
                     :wire:key="$file->uniqueId()"
                     :file="$file"
                     :disable-delete="!$canEdit"
+                    x-sortable-handle
+                    x-sortable-item="{{ $file->uniqueId() }}"
                 />
             @endforeach
         </div>

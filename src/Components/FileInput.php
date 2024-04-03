@@ -10,6 +10,7 @@ use Cabinet\FileType;
 use Exception;
 use Filament\Notifications\Notification;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use function Livewire\trigger;
 
@@ -59,6 +60,47 @@ class FileInput extends \Filament\Forms\Components\Field
 
                         Notification::make()
                             ->title(__('cabinet::messages.cannot-select-file'))
+                            ->body(__('cabinet::messages.unknown-error'))
+                            ->danger()
+                            ->send();
+                    }
+                }
+            ],
+            'fileInput:reorder' => [
+                function (FileInput $component, string $statePath, array $move) {
+                    try {
+                        $from = Arr::get($move, 'from');
+                        $to = Arr::get($move, 'to');
+
+                        if ($from === null || $to === null) {
+                            return;
+                        }
+
+                        $fromIndex = (int) $from;
+                        $toIndex = (int) $to;
+
+                        if ($component->getStatePath() !== $statePath) {
+                            return;
+                        }
+
+                        if ($component->isDisabled()) {
+                            throw new AuthorizationException('Das Feld ist deaktiviert.');
+                        }
+
+                        $files = Collection::wrap($component->getState());
+
+                        if ($fromIndex < 0 || $fromIndex >= $files->count() || $toIndex < 0 || $toIndex >= $files->count()) {
+                            return;
+                        }
+
+                        $files->splice($toIndex, 0, $files->splice($fromIndex, 1));
+
+                        $this->validateAndSetFiles($files->values()->all());
+                    } catch (Exception $e) {
+                        report($e);
+
+                        Notification::make()
+                            ->title(__('cabinet::messages.cannot-reorder-file'))
                             ->body(__('cabinet::messages.unknown-error'))
                             ->danger()
                             ->send();
