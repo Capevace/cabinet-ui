@@ -9,13 +9,14 @@
     'selectionMode' => null,
     'sidebarItems' => collect(),
     'selectedSidebarItem' => null,
-    'replaceableThumbnailUrl' => null
+    'replaceableThumbnailUrl' => null,
+    'selectedFiles' => [],
 ])
 
 <article
     wire:key="finder"
     x-data="{
-        selectedFiles: @entangle('selectedFiles'),
+        selectedFiles: @entangle('selectedFiles').live,
         selectionEnabled: @json($selectionMode !== null),
         max: @json($selectionMode?->max ?? null),
         showSidebar: @entangle('showSidebar'),
@@ -63,20 +64,6 @@
             } else {
                 this.selectedFiles = [...this.selectedFiles, file];
             }
-        },
-
-        repositionFileInSelection(file, newIndex) {
-            const index = this.selectedFiles.findIndex(f => f.id === file.id && f.source === file.source);
-
-            if (index === -1) {
-                return;
-            }
-
-            const files = [...this.selectedFiles];
-            const [removed] = files.splice(index, 1);
-            files.splice(newIndex, 0, removed);
-
-            this.selectedFiles = files;
         },
 
         isFileSelected(file) {
@@ -233,6 +220,19 @@
 				}
 			);
 		},
+
+		moveFileInSelection(event, fromIndex, toIndex) {
+            setTimeout(() => {
+                    const file = this.selectedFiles[fromIndex];
+                    const files = [...this.selectedFiles];
+
+                    files.splice(fromIndex, 1);
+                    files.splice(toIndex, 0, file);
+
+                    this.selectedFiles = files;
+                    this.selectedFiles = files;
+            }, 1000);
+        },
     }"
     @class([
         'border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 rounded-xl overflow-hidden flex flex-col flex-1',
@@ -330,50 +330,59 @@
                         'justify-between': selectedFiles.length > 0,
                     }"
                 >
-                    <?php
-                        $fileNames = $files->mapWithKeys(fn (\Cabinet\File|\Cabinet\Folder $fileOrFolder) => ["{$fileOrFolder->source}-{$fileOrFolder->id}" => $fileOrFolder->name]);
-                    ?>
                     <div
                         class="flex items-center space-x-4 text-xs mr-5"
-                        x-show="selectedFiles.length > 0"
-                        x-data="{
-                            makeThumbnailUrl(file) {
-                            	console.log(file);
-                                return '{{ $replaceableThumbnailUrl }}'
-                                    .replaceAll('REPLACE_SOURCE', file.source)
-                                    .replaceAll('REPLACE_ID', file.id);
-                            }
-                        }"
                     >
                         <x-filament::dropdown>
                             <x-slot:trigger>
                                 <x-filament::link url="#">
                                     <span x-text="selectedFiles.length"></span> ausgewählt
                                 </x-filament::link>
+{{--                                <pre x-html="JSON.stringify(selectedFiles, null, 2)"></pre>--}}
                             </x-slot:trigger>
 
                             <x-filament::dropdown.list>
-                                <template x-for="file in selectedFiles">
-                                    <div
-                                        class="flex items-center gap-3 px-1 py-1"
-                                        x-bind:wire:key="`${file.source}-${file.id}`"
-                                        x-bind:key="`${file.source}-${file.id}`"
-                                    >
-                                        <img
-                                            :src="makeThumbnailUrl(file)"
-                                            class="w-6 aspect-square object-cover object-center rounded flex-shrink-0"
-                                        />
-                                        <p class="block flex-1 truncate" x-text="file.name"></p>
+                                <div
+                                    x-show="selectedFiles.length > 0"
+                                    x-data="{
+                                        makeThumbnailUrl(file) {
+                                            return '{{ $replaceableThumbnailUrl }}'
+                                                .replaceAll('REPLACE_SOURCE', file.source)
+                                                .replaceAll('REPLACE_ID', file.id);
+                                        }
+                                    }"
+                                    x-sortable
+                                    x-on:end="moveFileInSelection($event.oldIndex, $event.newIndex)"
+                                    wire:ignore
+                                >
+                                    <template wire:ignore x-for="selectedFile in selectedFiles">
+                                        <div
+                                            class="flex items-center gap-3 px-1 py-1"
+{{--                                            wire:key="{{ $selectedFile->source }}-{{ $selectedFile->id }}"--}}
+{{--                                            key="{{ $selectedFile->source }}-{{ $selectedFile->id }}"--}}
+                                            :wire:key="`${selectedFile.source}-${selectedFile.id}`"
+                                            :id="selectedFile.id"
+                                            :key="selectedFile.id"
+                                            :x-sortable-item="selectedFile.id"
+                                            x-sortable-handle
+                                        >
+                                            <img
+                                                :src="makeThumbnailUrl(selectedFile)"
+                                                class="w-6 aspect-square object-cover object-center rounded flex-shrink-0"
+                                            />
+                                            <p class="block flex-1 truncate" x-text="selectedFile.name"></p>
 
-                                        <x-filament::icon-button
-                                            icon="heroicon-o-x-mark"
-                                            class="flex-shrink-0 mx-0"
-                                            size="xs"
-                                            color="gray"
-                                            @click.prevent="toggleFileSelection(file)"
-                                        />
-                                    </div>
-                                </template>
+                                            <x-filament::icon-button
+                                                icon="heroicon-o-x-mark"
+                                                class="flex-shrink-0 mx-0"
+                                                size="xs"
+                                                color="gray"
+                                                @click.prevent="toggleFileSelection(selectedFile)"
+                                            />
+                                        </div>
+{{--                                    @endforeach--}}
+                                    </template>
+                                </div>
                             </x-filament::dropdown.list>
                         </x-filament::dropdown>
 

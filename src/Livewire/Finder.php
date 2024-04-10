@@ -398,6 +398,22 @@ class Finder extends Component implements HasForms, HasActions
         return RefreshFile::make('refreshFile');
     }
 
+    public function moveFileInSelection(int $from, int $to)
+    {
+        // As PHP:
+        $file = $this->selectedFiles[$from];
+
+        $filesWithoutMovedFile = collect($this->selectedFiles)
+            ->filter(fn ($file, $index) => $index !== $from)
+            ->values();
+
+        $filesWithoutMovedFile->splice($to, 0, [$file]);
+
+        $this->selectedFiles = $filesWithoutMovedFile->all();
+
+        $this->skipRender();
+    }
+
     /**
      * @return Action[]
      */
@@ -497,6 +513,7 @@ class Finder extends Component implements HasForms, HasActions
             'sidebarItems' => collect($this->sidebarItems),
             'selectedSidebarItem' => $this->selectedSidebarItem,
             'replaceableThumbnailUrl' => $this->replaceableThumbnailUrl,
+            'selectedFiles' => $this->selectedFiles,
         ];
 
         return view($view, $data);
