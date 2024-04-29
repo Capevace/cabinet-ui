@@ -1,9 +1,17 @@
-@props(['file', 'disableDelete' => false])
+@props(['file', 'disableDelete' => false, 'sortable' => false])
 
 <div
     {{ $attributes->class("relative w-full flex gap-5 items-center") }}
+
+    @if ($sortable)
+    x-sortable-handle
+    x-sortable-item="{{ $file->uniqueId() }}"
+    @endif
 >
-    @svg('heroicon-o-bars-3', 'w-6 h-6 text-gray-500 dark:text-gray-400 cursor-pointer drag-handle')
+    @if ($sortable)
+        @svg('heroicon-o-bars-3', 'w-6 h-6 text-gray-500 dark:text-gray-400 cursor-pointer drag-handle')
+    @endif
+
     <div
 		class="w-20 flex items-center justify-center rounded-md overflow-hidden flex-shrink-0"
         style="aspect-ratio: 4/3"

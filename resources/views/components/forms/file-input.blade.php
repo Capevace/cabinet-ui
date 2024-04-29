@@ -132,8 +132,7 @@
                     :wire:key="$file->uniqueId()"
                     :file="$file"
                     :disable-delete="!$canEdit"
-                    x-sortable-handle
-                    x-sortable-item="{{ $file->uniqueId() }}"
+                    :sortable="$hasMultiple()"
                 />
             @endforeach
         </div>
