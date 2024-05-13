@@ -3,6 +3,7 @@
 namespace Cabinet\Filament\Livewire\Finder\Actions;
 
 use Cabinet\Cabinet;
+use Cabinet\Filament\Livewire\Finder;
 use Cabinet\Filament\Livewire\Finder\Actions\Concerns\ValidatesFileAttributes;
 use Cabinet\Folder;
 use Closure;
@@ -29,7 +30,7 @@ class DeleteFile extends \Filament\Actions\Action
 
         $this->requiresConfirmation();
 
-        $this->action(function (Cabinet $cabinet, array $data, array $arguments, DeleteFile $action) {
+        $this->action(function (Cabinet $cabinet, array $data, array $arguments, DeleteFile $action, Finder $livewire) {
             $action->verifyFileArguments($arguments);
 
             $file = null;
@@ -42,7 +43,11 @@ class DeleteFile extends \Filament\Actions\Action
 
             abort_if($file === null, 404);
 
+            $id = $file->id;
+            $source = $file->source;
+
             $cabinet->delete($file);
+            $livewire->deselectFile($source, $id);
         });
     }
 }

@@ -115,7 +115,7 @@ class Finder extends Component implements HasForms, HasActions
 		$source = Cabinet::getSource(SpatieMediaSource::TYPE);
         $files = collect($this->uploadedFiles)
             // Make sure the file exists
-            ->filter(fn (TemporaryUploadedFile $file) => $file->exists());
+            ->filter(fn (?TemporaryUploadedFile $file) => $file?->exists());
 
         if ($files->isEmpty()) {
             Notification::make()
@@ -206,6 +206,15 @@ class Finder extends Component implements HasForms, HasActions
         $this->selectedFiles = [];
     }
 
+    #[On('deselectFile')]
+    public function deselectFile(string $source, string $id): void
+    {
+        $this->selectedFiles = collect($this->selectedFiles)
+            ->filter(fn (array $file) => $file['source'] !== $source || $file['id'] !== $id)
+            ->values()
+            ->all();
+    }
+
     public function confirmFileSelection()
     {
         if (!$this->selectionMode) {
@@ -214,9 +223,9 @@ class Finder extends Component implements HasForms, HasActions
 
         $files = collect($this->selectedFiles)
             ->map(fn (array $file) => Cabinet::file($file['source'], $file['id']))
+            ->filter() // Remove null values (files not found)
             ->filter(fn (File $file) => $this->acceptableTypeChecker->isAccepted($file->type))
             //->filter(/** TODO: fine-grained auth check */)
-            ->filter()
             ->map(fn (File $file) => $file->toIdentifier());
 
         $livewireId = str($this->selectionMode->livewireId)
