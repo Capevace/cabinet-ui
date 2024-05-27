@@ -9,6 +9,7 @@ use Cabinet\Filament\Livewire\FinderModal;
 use Cabinet\FileType;
 use Filament\Forms\Components\Actions\Action as FormAction;
 use Filament\Infolists\Components\Actions\Action as InfolistAction;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Livewire\Component;
 
@@ -50,9 +51,31 @@ trait HasSelectAction
 //                ])
 //            )
             ->size('sm')
-            ->extraAttributes(fn (FormAction|InfolistAction $action) => [
-                'wire:click.hover' => new HtmlString($action->getLivewireClickHandler())
-            ])
+            ->iconPosition('after')
+            ->extraAttributes(function (Component $livewire, FileInput|FileEntry $component) {
+                $data = [
+                    'folderId' => $this->getRootDirectory()->id,
+                    'sidebarItems' => $this->getSidebarItems(),
+                    'selectedFiles' => $this->getFileIdentifiers()->all(),
+                    'acceptedTypes' => collect($component->getAcceptedTypes())
+                        ->map(fn (FileType $type) => new Finder\FileTypeDto(
+                            slug: $type->slug(),
+                            mime: method_exists($type, 'getMime')
+                                ? $type->getMime()
+                                : null
+                        ))
+                        ->all(),
+                    'mode' => new Finder\SelectionMode(
+                        livewireId: $livewire->getId(),
+                        statePath: $component->getStatePath(),
+                        max: $component->getMax(),
+                    )
+                ];
+
+                return [
+                    'x-on:click' => new HtmlString(Blade::render('$dispatch(\'open\', @js($data))', ['data' => $data]))
+                ];
+            })
             ->action(function (Component $livewire, FileInput|FileEntry $component) {
                 $livewire
                     ->dispatch(

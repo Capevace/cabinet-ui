@@ -36,6 +36,7 @@ use Livewire\Component;
 
 use Cabinet\Folder;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
 
 /**
  * @property-read Collection<File> $files
@@ -105,7 +106,10 @@ class Finder extends Component implements HasForms, HasActions
             ->filter()
             ->all();
 
-        $this->selectionMode = Finder\SelectionMode::fromLivewire($mode);
+        if ($mode !== null) {
+            $this->selectionMode = Finder\SelectionMode::fromLivewire($mode);
+        }
+
         $this->selectedFiles = $selectedFiles;
     }
 
@@ -155,14 +159,29 @@ class Finder extends Component implements HasForms, HasActions
                 $invalidFiles->each->delete();
             }
 
-			$validFiles
-                // Upload the file
-				->each(function (TemporaryUploadedFile $file) use ($folder, $source) {
-					$source->upload($folder, $file);
 
-                    // Delete the file from the uploads directory, now that it's been uploaded to destination
-					$file->delete();
-				});
+                $validFiles
+                    // Upload the file
+                    ->each(function (TemporaryUploadedFile $file) use ($folder, $source, $invalidFiles) {
+                        try {
+                            $source->upload($folder, $file);
+                        } catch (FileIsTooBig $exception) {
+                            report($exception);
+
+                            $maxFileSize = \Spatie\MediaLibrary\Support\File::getHumanReadableSize(config('media-library.max_file_size'));
+
+                            $invalidFiles->push($file);
+
+                            Notification::make()
+                                ->danger()
+                                ->title(__('cabinet::messages.file-size-exceeded', ['size' => $maxFileSize]))
+                                ->send();
+                        }
+
+                        // Delete the file from the uploads directory, now that it's been uploaded to destination
+                        $file->delete();
+                    });
+
 
             $skippedFilesText = $invalidFiles->count() > 0
                 ? trans_choice('cabinet::messages.files-skipped', $invalidFiles->count())

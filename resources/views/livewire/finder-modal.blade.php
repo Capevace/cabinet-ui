@@ -32,7 +32,7 @@
 		}"
 		:class="{
 			'bg-gray-500/70 dark:bg-gray-900/70 backdrop-blur cursor-pointer': open || loading,
-			'pointer-events-none': !open && !loading,
+			'pointer-events-none': !open && !loading
 		}"
 		x-cloak
 	>
@@ -66,7 +66,7 @@
 		/>
 
 		<div
-			class="max-w-7xl w-full relative z-40"
+			class="max-w-7xl w-full relative z-40 cursor-auto"
 			x-show="open"
 			x-transition:enter="transition ease-out duration-300"
 			x-transition:enter-start="opacity-0 transform scale-95"

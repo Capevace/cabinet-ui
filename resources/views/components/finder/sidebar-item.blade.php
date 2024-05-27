@@ -19,8 +19,17 @@
     type="button"
     wire:click="openFolder('{{ $item->id }}')"
 >
+    <x-filament::loading-indicator
+        wire:loading
+        wire:target="openFolder('{{ $item->id }}')"
+        class="w-6 h-6 text-primary-600 dark:text-primary-400"
+    />
+
     <x-filament::icon
         :icon="$item->icon"
+        wire:loading.remove
+        wire:target="openFolder('{{ $item->id }}')"
+
         @class([
             'fi-sidebar-item-icon h-6 w-6',
             'text-gray-400 dark:text-gray-500' => ! $active,

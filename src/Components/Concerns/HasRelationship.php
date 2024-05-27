@@ -8,6 +8,8 @@ use Cabinet\HasFiles;
 use Cabinet\Models\FileRef;
 use Closure;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 trait HasRelationship
 {
@@ -17,7 +19,7 @@ trait HasRelationship
     {
         $this->relationship = $relationship ?? $this->getName();
 
-        $this->loadStateFromRelationshipsUsing(function (FileInput $component, HasFiles $record) {
+        $this->loadStateFromRelationshipsUsing(function (FileInput $component, HasFiles|Model $record) {
             $relationship = $component->getRelationship();
 
             if($relationship === null)
@@ -40,7 +42,7 @@ trait HasRelationship
             }
         });
 
-        $this->saveRelationshipsUsing(function (FileInput $component, HasFiles $record, ?array $state) {
+        $this->saveRelationshipsUsing(function (FileInput $component, HasFiles|Model $record, ?array $state) {
             $relationship = $component->getRelationship();
 
             if($relationship === null)
@@ -58,8 +60,17 @@ trait HasRelationship
                     ? Cabinet::file($state['source'], $state['id'])
                     : null;
 
-                // Morphone
-                Cabinet::syncOne($record, $relationship, $file);
+                $relation = $record->{$relationship}();
+
+                if ($relation instanceof BelongsTo) {
+                    $reference = Cabinet::createReference($file);
+                    $relation->associate($reference);
+
+                    $record->save();
+                } else {
+                    // Morphone
+                    Cabinet::syncOne($record, $relationship, $file);
+                }
             }
         });
 

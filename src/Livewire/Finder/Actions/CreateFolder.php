@@ -24,6 +24,7 @@ class CreateFolder extends \Filament\Actions\Action
         $this->iconButton();
         $this->icon('heroicon-o-folder-plus');
 
+        $this->modalSubmitActionLabel(__('cabinet::actions.create-folder'));
         $this->modalWidth('sm');
         $this->modalAlignment('center');
         $this->extraAttributes([

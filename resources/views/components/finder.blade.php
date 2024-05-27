@@ -261,7 +261,8 @@
                     icon="heroicon-o-check"
                     icon-position="after"
                     @click="confirmFileSelection"
-    {{--                x-bind:disabled="selectedFiles.length == 0"--}}
+                    wire:target="confirmFileSelection"
+                    wire:loading.attr="disabled"
                 >
                     <span x-text="selectButtonLabel()"></span>
                 </x-filament::button>
@@ -416,8 +417,16 @@
             <main
 				class="relative flex-1 overflow-y-auto transition-colors flex flex-col"
 			>
-				<div
-					class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none bg-gray-200/50 dark:bg-gray-800/50 backdrop-blur font-medium"
+                <x-cabinet-filament::finder.cards
+                    :$acceptedTypeChecker
+                    :has-sidebar="count($sidebarItems) > 0"
+                    :max="$selectionMode?->max"
+                    :$files
+                    :preview-action="$this->previewFileAction"
+                />
+
+                <div
+					class="z-10 absolute inset-0 flex flex-col items-center justify-center pointer-events-none bg-gray-200/50 dark:bg-gray-800/50 backdrop-blur font-medium"
 					x-show="draggingFiles > 0"
 					x-transition:enter="transition ease-out duration-150"
 					x-transition:enter-start="opacity-0"
@@ -429,14 +438,6 @@
 					@svg('heroicon-o-cloud-arrow-up', 'w-20 h-20 text-gray-500 mb-5 bg-white border shadow-inner border-gray-200 rounded-full p-2')
 					<p class="filter text-gray-700 bg-gray-50 border shadow-inner border-gray-200 rounded-xl px-3 py-1">Dateien hier ablegen, um sie hochzuladen</p>
 				</div>
-
-                <x-cabinet-filament::finder.cards
-                    :$acceptedTypeChecker
-                    :has-sidebar="count($sidebarItems) > 0"
-                    :max="$selectionMode?->max"
-                    :$files
-                    :preview-action="$this->previewFileAction"
-                />
             </main>
         </section>
     </div>

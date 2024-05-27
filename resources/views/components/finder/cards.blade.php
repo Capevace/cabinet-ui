@@ -37,4 +37,18 @@
             @endif
         @endforeach
     </ul>
+
+    @if (count($files) === 0)
+        <x-filament-tables::empty-state
+            heading="{{ __('cabinet::messages.empty-folder') }}"
+            description="{{ __('cabinet::messages.drag-or-add-files') }}"
+            icon="heroicon-o-folder"
+            class="col-span-full opacity-75s"
+            :actions="[
+                $this->uploadFileAction
+                    ->button()
+                    ->color('gray')
+            ]"
+        />
+    @endif
 </div>
