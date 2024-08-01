@@ -5,9 +5,52 @@
     :class="{
         'opacity-60': selectionEnabled && (!canSelectMore && !isFileSelected(@js($file->toIdentifier())) || {{ $disabled ? 'true' : 'false' }}),
         'ring-2 ring-primary-500': isFileSelected(@js($file->toIdentifier())),
+        'opacity-50': draggingVirtualFile,
 {{--        'pointer-events-none': draggingFiles > 0,--}}
     }"
-	@contextmenu="console.log('context menu')"
+    x-on:dragend="
+        draggingVirtualFile = false;
+        draggingFiles = 0;
+    "
+    draggable="true"
+    x-on:dragstart.self="
+        draggingVirtualFile = true;
+        draggingFiles = 0;
+
+        const json = JSON.stringify(@js($file->toIdentifier()));
+
+        $event.dataTransfer.setData('application/cabinet-identifier', json);
+        $event.dataTransfer.effectAllowed='move';
+        $event.dataTransfer.dropEffect='move';
+
+        const thumbnail = document.createElement('img');
+        thumbnail.src = '{{ $file->previewUrl }}';
+        thumbnail.style.width = '100%';
+        thumbnail.style.height = '100%';
+        thumbnail.style.objectFit = 'cover';
+
+        const div = document.createElement('div');
+        div.style.width = '200px';
+        div.style.height = '150px';
+        div.style.backgroundColor = '#fff';
+        div.style.opacity = '0.1';
+        div.style.borderRadius = '10px';
+        div.style.overflow = 'hidden';
+        div.appendChild(thumbnail);
+
+        // Append element to body
+        document.body.appendChild(div);
+
+        // Set element to dataTransfer
+        $event.dataTransfer.setDragImage(div, 200, 150);
+    "
+    @drop.prevent="
+        const json = $event.dataTransfer.getData('application/cabinet-identifier');
+        const identifier = JSON.parse(json);
+
+        $wire.moveFile(identifier.source, identifier.id, draggingOverFolder);
+        draggingOverFolder = null;
+    "
 >
     <button
         class="flex flex-col flex-1 w-full text-left"
@@ -76,6 +119,7 @@
                     alt="{{ $file->name }}"
                     loading="lazy"
                     class="h-full w-full object-center object-cover"
+                    draggable="false"
                 />
 				<x-filament::loading-indicator class="w-10 h-10 text-gray-500" x-show="!renderedSrc" />
             @else

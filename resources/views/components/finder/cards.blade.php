@@ -6,9 +6,23 @@
 
 <div
     class="flex-1"
-    @dragenter="draggingFiles++; console.info('dragging files')"
-    @dragleave="draggingFiles--; console.info('not dragging files')"
-    @drop.prevent="uploadDroppedFile"
+    @dragenter="
+        if (!$event.dataTransfer.getData('application/cabinet-identifier') && draggingVirtualFile === false) {
+            draggingFiles++;
+        }
+    "
+    @dragleave="
+        if (!$event.dataTransfer.getData('application/cabinet-identifier')) {
+            draggingFiles--;
+        }
+    "
+    @drop.prevent="
+        if (!$event.dataTransfer.getData('application/cabinet-identifier')) {
+            uploadDroppedFile($event);
+            $event.preventDefault();
+            draggingFiles = 0;
+        }
+    "
 >
     <ul
         {{ $attributes->class([

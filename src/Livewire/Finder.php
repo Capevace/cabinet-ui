@@ -28,6 +28,7 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use League\Flysystem\UnableToCheckFileExistence;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -193,10 +194,7 @@ class Finder extends Component implements HasForms, HasActions
                 ->body($skippedFilesText)
                 ->send();
 
-			unset($this->uploadedFiles);
-			unset($this->folder);
-			unset($this->files);
-			unset($this->breadcrumbs);
+			$this->refresh();
         } catch (UnableToCheckFileExistence $exception) {
             Notification::make()
                 ->danger()
@@ -223,6 +221,14 @@ class Finder extends Component implements HasForms, HasActions
 
 		$this->selectionMode = null;
         $this->selectedFiles = [];
+    }
+
+    public function refresh()
+    {
+        unset($this->uploadedFiles);
+        unset($this->folder);
+        unset($this->files);
+        unset($this->breadcrumbs);
     }
 
     #[On('deselectFile')]
@@ -276,8 +282,35 @@ class Finder extends Component implements HasForms, HasActions
         }
 
         $this->folderId = $id;
-        unset($this->files);
-        unset($this->folder);
+
+        $this->refresh();
+    }
+
+    public function moveFile(string $source, string $id, ?string $folderId)
+    {
+        if ($folderId === null) {
+            return;
+        }
+
+        $validFolderId = $this->files
+            ->filter(fn (File|Folder $file) => $file instanceof Folder)
+            ->first(fn (Folder $folder) => $folder->id === $folderId)
+            ?->id;
+
+        if ($validFolderId === null) {
+            $validFolderId = $this->breadcrumbs
+                ->filter(fn (Breadcrumb $breadcrumb) => $breadcrumb->folderId === $folderId)
+                ->first()
+                ?->folderId;
+        }
+
+        if ($validFolderId !== null && $folder = Cabinet::findCabinetDirectory($validFolderId)) {
+            $file = Cabinet::file($source, $id);
+
+            Cabinet::move($file, $folder);
+
+            $this->refresh();
+        }
     }
 
     #[Computed]
@@ -343,7 +376,10 @@ class Finder extends Component implements HasForms, HasActions
     {
         $files = $this->folder?->files() ?? collect();
 
-        return $files;
+        return $files
+            ->sortBy(fn (File|Folder $fileOrFolder) =>
+                ($fileOrFolder instanceOf Folder ? 0 : 1) . Str::lower($fileOrFolder->name)
+            );
     }
 
     #[Computed]

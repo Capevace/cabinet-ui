@@ -23,6 +23,8 @@
         previousBodyOverflow: null,
 
         draggingFiles: 0,
+        draggingVirtualFile: null,
+        draggingOverFolder: null,
         uploads: [],
 
         init() {
@@ -356,12 +358,9 @@
                                     x-on:end="moveFileInSelection($event.oldIndex, $event.newIndex)"
                                     wire:ignore
                                 >
-                                    <template wire:ignore x-for="selectedFile in selectedFiles">
+                                    <template wire:ignore x-for="selectedFile in selectedFiles" :key="selectedFile.id">
                                         <div
                                             class="flex items-center gap-3 px-1 py-1"
-{{--                                            wire:key="{{ $selectedFile->source }}-{{ $selectedFile->id }}"--}}
-{{--                                            key="{{ $selectedFile->source }}-{{ $selectedFile->id }}"--}}
-                                            :wire:key="`${selectedFile.source}-${selectedFile.id}`"
                                             :id="selectedFile.id"
                                             :key="selectedFile.id"
                                             :x-sortable-item="selectedFile.id"
@@ -425,19 +424,22 @@
                     :preview-action="$this->previewFileAction"
                 />
 
-                <div
-					class="z-10 absolute inset-0 flex flex-col items-center justify-center pointer-events-none bg-gray-200/50 dark:bg-gray-800/50 backdrop-blur font-medium"
-					x-show="draggingFiles > 0"
-					x-transition:enter="transition ease-out duration-150"
-					x-transition:enter-start="opacity-0"
-					x-transition:enter-end="opacity-100"
-					x-transition:leave="transition ease-in duration-150"
-					x-transition:leave-start="opacity-100"
-					x-transition:leave-end="opacity-0"
-				>
-					@svg('heroicon-o-cloud-arrow-up', 'w-20 h-20 text-gray-500 mb-5 bg-white border shadow-inner border-gray-200 rounded-full p-2')
-					<p class="filter text-gray-700 bg-gray-50 border shadow-inner border-gray-200 rounded-xl px-3 py-1">Dateien hier ablegen, um sie hochzuladen</p>
-				</div>
+                <template x-if="!draggingVirtualFile && draggingFiles > 0">
+
+                    <div
+                        class="z-10 absolute inset-0 flex flex-col items-center justify-center pointer-events-none bg-gray-200/50 dark:bg-gray-800/50 backdrop-blur font-medium"
+                        x-show="!draggingVirtualFile && draggingFiles > 0"
+                        x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0"
+                    >
+                        @svg('heroicon-o-cloud-arrow-up', 'w-20 h-20 text-gray-500 mb-5 bg-white border shadow-inner border-gray-200 rounded-full p-2')
+                        <p class="filter text-gray-700 bg-gray-50 border shadow-inner border-gray-200 rounded-xl px-3 py-1">Dateien hier ablegen, um sie hochzuladen</p>
+                    </div>
+                </template>
             </main>
         </section>
     </div>
