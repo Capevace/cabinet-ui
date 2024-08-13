@@ -3,7 +3,7 @@
 <li
     {{ $attributes->class(['flex flex-col group border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors rounded-md overflow-hidden']) }}
     :class="{
-        'opacity-60': selectionEnabled && (!canSelectMore && !isFileSelected(@js($file->toIdentifier())) || {{ $disabled ? 'true' : 'false' }}),
+        'opacity-60 cursor-not-allowed': selectionEnabled && (!canSelectMore && !isFileSelected(@js($file->toIdentifier())) || {{ $disabled ? 'true' : 'false' }}),
         'ring-2 ring-primary-500': isFileSelected(@js($file->toIdentifier())),
         'opacity-50': draggingVirtualFile,
 {{--        'pointer-events-none': draggingFiles > 0,--}}
@@ -56,7 +56,11 @@
         class="flex flex-col flex-1 w-full text-left"
         type="button"
 {{--        x-bind:disabled="(!canSelectMore && !isFileSelected(@js($file->toIdentifier()))) || {{ $disabled ? 'true' : 'false' }}"--}}
-        @click="toggleFileSelection(@js($file->toIdentifier()))"
+        @click="
+            if (!(selectionEnabled && (!canSelectMore && !isFileSelected(@js($file->toIdentifier())) || {{ $disabled ? 'true' : 'false' }}))) {
+                toggleFileSelection(@js($file->toIdentifier()));
+            }
+        "
         @contextmenu="openContextMenu('{{ $file->type->slug() }}', $event, @js($file->toIdentifier()))"
     >
         <figure
