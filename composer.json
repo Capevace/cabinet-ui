@@ -22,8 +22,10 @@
     ],
     "require": {
         "php": "^8.0",
-        "spatie/laravel-package-tools": "^1.15",
-        "illuminate/contracts": "^12.0 || ^11.0 || ^10.0"
+        "spatie/laravel-package-tools": "^1.92",
+        "illuminate/contracts": "^12.0 || ^11.0 || ^10.0",
+        "filament/forms": "^4",
+        "filament/infolists": "^4"
     },
     "extra": {
         "laravel": {
@@ -31,5 +33,8 @@
                 "Cabinet\\Filament\\CabinetFilamentServiceProvider"
             ]
         }
+    },
+    "require-dev": {
+        "filament/upgrade": "^4.0"
     }
 }

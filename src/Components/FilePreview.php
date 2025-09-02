@@ -2,10 +2,11 @@
 
 namespace Cabinet\Filament\Components;
 
+use Filament\Schemas\Components\Component;
 use Cabinet\File;
 use Illuminate\Support\Arr;
 
-class FilePreview extends \Filament\Forms\Components\Component
+class FilePreview extends Component
 {
     protected string $view = 'cabinet-filament::components.forms.file-preview';
 

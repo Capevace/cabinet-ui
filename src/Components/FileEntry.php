@@ -2,6 +2,14 @@
 
 namespace Cabinet\Filament\Components;
 
+use Cabinet\Filament\Components\Concerns\HasAcceptedTypes;
+use Cabinet\Filament\Components\Concerns\HasEmptyState;
+use Cabinet\Filament\Components\Concerns\HasHeadings;
+use Cabinet\Filament\Components\Concerns\HasMax;
+use Cabinet\Filament\Components\Concerns\HasRootDirectory;
+use Cabinet\Filament\Components\Concerns\HasSelectAction;
+use Cabinet\Filament\Components\Concerns\HasSidebarItems;
+use Cabinet\Filament\Components\Concerns\HasTooltip;
 use Cabinet\Exceptions\FileTypeNotAccepted;
 use Cabinet\Exceptions\InvalidFileData;
 use Cabinet\Facades\Cabinet;
@@ -16,15 +24,14 @@ use function Livewire\trigger;
 
 class FileEntry extends Entry
 {
-    use Concerns\HasAcceptedTypes;
-    use Concerns\HasEmptyState;
-    use Concerns\HasHeadings;
-    use Concerns\HasMax;
+    use HasAcceptedTypes;
+    use HasEmptyState;
+    use HasHeadings;
+    use HasMax;
 //    use Concerns\HasRelationship;
-    use Concerns\HasRootDirectory;
-    use Concerns\HasSelectAction;
-    use Concerns\HasSidebarItems;
-    use Concerns\HasTooltip;
+    use HasRootDirectory;
+    use HasSelectAction;
+    use HasSidebarItems;
 
     protected string $view = 'cabinet-filament::components.forms.file-entry';
 

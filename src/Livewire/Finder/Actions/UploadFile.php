@@ -2,24 +2,26 @@
 
 namespace Cabinet\Filament\Livewire\Finder\Actions;
 
+use Filament\Actions\Action;
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Utilities\Get;
+use Exception;
 use Cabinet\Cabinet;
 use Cabinet\Filament\Livewire\Finder\Actions\Concerns\HasFolder;
 use Cabinet\FileType;
 use Cabinet\Sources\Contracts\AcceptsData;
 use Closure;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
 use Illuminate\Support\Arr;
 use Illuminate\Support\HtmlString;
 use League\Flysystem\UnableToCheckFileExistence;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
-class UploadFile extends \Filament\Actions\Action
+class UploadFile extends Action
 {
     use HasFolder;
 
@@ -46,13 +48,13 @@ class UploadFile extends \Filament\Actions\Action
             'x-on:click' => new HtmlString("setTimeout(() => document.getElementById('mountedActionsData.0.name').focus(), 200)")
         ]);
 
-        $this->mountUsing(function (Form $form, self $action) {
-            $form->fill([
+        $this->mountUsing(function (Schema $schema, self $action) {
+            $schema->fill([
                 'form' => $action->getUploadForm()
             ]);
         });
 
-        $this->form([
+        $this->schema([
             Select::make('form')
                 ->hiddenLabel()
                 ->label('Art')
@@ -100,7 +102,7 @@ class UploadFile extends \Filament\Actions\Action
 
                 $action->success();
             } else {
-                throw new \Exception("The source {$form} does not accept data.");
+                throw new Exception("The source {$form} does not accept data.");
             }
         });
     }

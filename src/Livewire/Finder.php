@@ -2,6 +2,7 @@
 
 namespace Cabinet\Filament\Livewire;
 
+use Cabinet\Filament\Livewire\Finder\SelectionMode;
 use Cabinet\Facades\Cabinet;
 use Cabinet\Filament\Livewire\Finder\AcceptableTypeChecker;
 use Cabinet\Filament\Livewire\Finder\Actions\CreateFolder;
@@ -74,7 +75,7 @@ class Finder extends Component implements HasForms, HasActions
     #[Locked]
     public array $acceptedTypes = [];
 
-	public ?Finder\SelectionMode $selectionMode = null;
+	public ?SelectionMode $selectionMode = null;
 
     public array $selectedFiles = [];
 
@@ -108,7 +109,7 @@ class Finder extends Component implements HasForms, HasActions
             ->all();
 
         if ($mode !== null) {
-            $this->selectionMode = Finder\SelectionMode::fromLivewire($mode);
+            $this->selectionMode = SelectionMode::fromLivewire($mode);
         }
 
         $this->selectedFiles = $selectedFiles;

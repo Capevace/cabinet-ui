@@ -2,16 +2,17 @@
 
 namespace Cabinet\Filament\Livewire\Finder\Actions;
 
+use Filament\Actions\Action;
+use Filament\Schemas\Schema;
+use Exception;
 use Cabinet\Cabinet;
 use Cabinet\Filament\Livewire\Finder\Actions\Concerns\ValidatesFileAttributes;
 use Cabinet\Folder;
 use Closure;
-use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Illuminate\Support\HtmlString;
 
-class ShareFile extends \Filament\Actions\Action
+class ShareFile extends Action
 {
     use ValidatesFileAttributes;
 
@@ -31,23 +32,23 @@ class ShareFile extends \Filament\Actions\Action
         $this->modalWidth('sm');
         $this->modalAlignment('center');
 
-        $this->mountUsing(function (array $arguments, Cabinet $cabinet, Form $form, ShareFile $action) {
+        $this->mountUsing(function (array $arguments, Cabinet $cabinet, Schema $schema, ShareFile $action) {
             $action->verifyFileArguments($arguments);
 
             if ($arguments['type'] === (new \Cabinet\Types\Folder)->slug()) {
-                throw new \Exception('Cannot share folders.');
+                throw new Exception('Cannot share folders.');
             } else {
                 $file = $cabinet->file($arguments['source'], $arguments['id']);
             }
 
             abort_if($file === null, 404);
 
-            $form->fill([
+            $schema->fill([
                 'url' => $file->url()
             ]);
         });
 
-        $this->form([
+        $this->schema([
             TextInput::make('url')
                 ->label('URL')
                 ->disabled()

@@ -2,6 +2,7 @@
 
 namespace Cabinet\Filament\Livewire\Finder\Actions;
 
+use Filament\Actions\Action;
 use Cabinet\Cabinet;
 use Cabinet\Filament\Livewire\Finder\Actions\Concerns\ValidatesFileAttributes;
 use Cabinet\File;
@@ -14,7 +15,7 @@ use Livewire\Component;
 use Spatie\MediaLibrary\Conversions\FileManipulator;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class RefreshFile extends \Filament\Actions\Action
+class RefreshFile extends Action
 {
     use ValidatesFileAttributes;
 

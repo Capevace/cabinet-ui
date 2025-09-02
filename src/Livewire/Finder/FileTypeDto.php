@@ -42,7 +42,7 @@ class FileTypeDto implements Wireable
         );
     }
 
-    public function toFileType(): \Cabinet\FileType
+    public function toFileType(): FileType
     {
         return Cabinet::makeFileType($this->slug, $this->mime);
     }

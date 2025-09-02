@@ -2,12 +2,13 @@
 
 namespace Cabinet\Filament\Livewire\Finder\Actions;
 
+use Filament\Actions\Action;
 use Cabinet\Cabinet;
 use Cabinet\Filament\Livewire\Finder\Actions\Concerns\HasFolder;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Support\HtmlString;
 
-class CreateFolder extends \Filament\Actions\Action
+class CreateFolder extends Action
 {
     use HasFolder;
     public static function getDefaultName(): ?string
@@ -31,7 +32,7 @@ class CreateFolder extends \Filament\Actions\Action
             'x-on:click' => new HtmlString("setTimeout(() => document.getElementById('mountedActionsData.0.name').focus(), 200)")
         ]);
 
-        $this->form([
+        $this->schema([
             TextInput::make('name')
                 ->label('Name')
                 ->autofocus()

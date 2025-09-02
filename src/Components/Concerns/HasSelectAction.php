@@ -2,22 +2,25 @@
 
 namespace Cabinet\Filament\Components\Concerns;
 
+use Closure;
+use Filament\Actions\Action;
+use Exception;
+use Cabinet\Filament\Livewire\Finder\FileTypeDto;
+use Cabinet\Filament\Livewire\Finder\SelectionMode;
 use Cabinet\Filament\Components\FileEntry;
 use Cabinet\Filament\Components\FileInput;
 use Cabinet\Filament\Livewire\Finder;
 use Cabinet\Filament\Livewire\FinderModal;
 use Cabinet\FileType;
-use Filament\Forms\Components\Actions\Action as FormAction;
-use Filament\Infolists\Components\Actions\Action as InfolistAction;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Livewire\Component;
 
 trait HasSelectAction
 {
-	protected \Closure|FormAction|InfolistAction|null $selectAction = null;
+	protected Closure|Action|null $selectAction = null;
 
-    public function selectAction(\Closure|FormAction|InfolistAction $selectAction): static
+    public function selectAction(Closure|Action $selectAction): static
     {
         $this->selectAction = $selectAction;
 
@@ -26,7 +29,7 @@ trait HasSelectAction
         return $this;
     }
 
-    public function getSelectAction(): FormAction|InfolistAction|null
+    public function getSelectAction(): Action|null
     {
         return $this->evaluate($this->selectAction);
     }
@@ -34,12 +37,12 @@ trait HasSelectAction
     /**
      * @param 'form'|'infolist' $type
      */
-    public function makeSelectAction(string $type = 'form'): FormAction|InfolistAction
+    public function makeSelectAction(string $type = 'form'): Action
     {
         $class = match ($type) {
-            'form' => FormAction::class,
-            'infolist' => InfolistAction::class,
-            default => throw new \Exception("Unknown action type: $type")
+            'form' => Action::class,
+            'infolist' => Action::class,
+            default => throw new Exception("Unknown action type: $type")
         };
 
 
@@ -58,14 +61,14 @@ trait HasSelectAction
                     'sidebarItems' => $this->getSidebarItems(),
                     'selectedFiles' => $this->getFileIdentifiers()->all(),
                     'acceptedTypes' => collect($component->getAcceptedTypes())
-                        ->map(fn (FileType $type) => new Finder\FileTypeDto(
+                        ->map(fn (FileType $type) => new FileTypeDto(
                             slug: $type->slug(),
                             mime: method_exists($type, 'getMime')
                                 ? $type->getMime()
                                 : null
                         ))
                         ->all(),
-                    'mode' => new Finder\SelectionMode(
+                    'mode' => new SelectionMode(
                         livewireId: $livewire->getId(),
                         statePath: $component->getStatePath(),
                         max: $component->getMax(),
@@ -84,14 +87,14 @@ trait HasSelectAction
                         sidebarItems: $this->getSidebarItems(),
                         selectedFiles: $this->getFileIdentifiers()->all(),
                         acceptedTypes: collect($component->getAcceptedTypes())
-                            ->map(fn (FileType $type) => new Finder\FileTypeDto(
+                            ->map(fn (FileType $type) => new FileTypeDto(
                                 slug: $type->slug(),
                                 mime: method_exists($type, 'getMime')
                                     ? $type->getMime()
                                     : null
                             ))
                             ->all(),
-                        mode: new Finder\SelectionMode(
+                        mode: new SelectionMode(
                             livewireId: $livewire->getId(),
                             statePath: $component->getStatePath(),
                             max: $component->getMax(),

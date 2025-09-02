@@ -2,6 +2,8 @@
 
 namespace Cabinet\Filament\Livewire\Finder\Actions;
 
+use Filament\Schemas\Schema;
+use Exception;
 use Cabinet\Cabinet;
 use Cabinet\Filament\Components\FilePreview;
 use Cabinet\Filament\Livewire\Finder\Actions\Concerns\ValidatesFileAttributes;
@@ -10,7 +12,6 @@ use Closure;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Illuminate\Support\HtmlString;
 
 class PreviewFile extends \Filament\Actions\Action
@@ -32,7 +33,7 @@ class PreviewFile extends \Filament\Actions\Action
 
         $this->modalAlignment('center');
 
-        $this->mountUsing(function (array $arguments, Cabinet $cabinet, Form $form, PreviewFile $action) {
+        $this->mountUsing(function (array $arguments, Cabinet $cabinet, Schema $schema, PreviewFile $action) {
 
 
 //            $form->fill([
@@ -40,11 +41,11 @@ class PreviewFile extends \Filament\Actions\Action
 //            ]);
         });
 
-        $this->form(function (array $arguments, Cabinet $cabinet, PreviewFile $action) {
+        $this->schema(function (array $arguments, Cabinet $cabinet, PreviewFile $action) {
             $action->verifyFileArguments($arguments);
 
             if ($arguments['type'] === (new \Cabinet\Types\Folder)->slug()) {
-                throw new \Exception('Cannot preview folders.');
+                throw new Exception('Cannot preview folders.');
             } else {
                 $file = $cabinet->file($arguments['source'], $arguments['id']);
             }

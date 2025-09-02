@@ -2,14 +2,15 @@
 
 namespace Cabinet\Filament\Livewire\Finder\Actions;
 
+use Filament\Actions\Action;
+use Filament\Schemas\Schema;
 use Cabinet\Cabinet;
 use Cabinet\Filament\Livewire\Finder\Actions\Concerns\ValidatesFileAttributes;
 use Cabinet\Folder;
 use Closure;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 
-class RenameFile extends \Filament\Actions\Action
+class RenameFile extends Action
 {
     use ValidatesFileAttributes;
 
@@ -30,7 +31,7 @@ class RenameFile extends \Filament\Actions\Action
         $this->modalWidth('sm');
         $this->modalAlignment('center');
 
-        $this->mountUsing(function (array $arguments, Cabinet $cabinet, Form $form, RenameFile $action) {
+        $this->mountUsing(function (array $arguments, Cabinet $cabinet, Schema $schema, RenameFile $action) {
             $action->verifyFileArguments($arguments);
 
             if ($arguments['type'] === (new \Cabinet\Types\Folder)->slug()) {
@@ -41,12 +42,12 @@ class RenameFile extends \Filament\Actions\Action
 
             abort_if($file === null, 404);
 
-            $form->fill([
+            $schema->fill([
                 'name' => $file->name
             ]);
         });
 
-        $this->form([
+        $this->schema([
             TextInput::make('name')
                 ->label('Name')
                 ->autofocus()

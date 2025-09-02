@@ -2,6 +2,16 @@
 
 namespace Cabinet\Filament\Components;
 
+use Filament\Forms\Components\Field;
+use Cabinet\Filament\Components\Concerns\HasAcceptedTypes;
+use Cabinet\Filament\Components\Concerns\HasEmptyState;
+use Cabinet\Filament\Components\Concerns\HasHeadings;
+use Cabinet\Filament\Components\Concerns\HasMax;
+use Cabinet\Filament\Components\Concerns\HasRelationship;
+use Cabinet\Filament\Components\Concerns\HasRootDirectory;
+use Cabinet\Filament\Components\Concerns\HasSelectAction;
+use Cabinet\Filament\Components\Concerns\HasSidebarItems;
+use Cabinet\Filament\Components\Concerns\HasTooltip;
 use Cabinet\Exceptions\FileTypeNotAccepted;
 use Cabinet\Exceptions\InvalidFileData;
 use Cabinet\Facades\Cabinet;
@@ -14,17 +24,17 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use function Livewire\trigger;
 
-class FileInput extends \Filament\Forms\Components\Field
+class FileInput extends Field
 {
-    use Concerns\HasAcceptedTypes;
-    use Concerns\HasEmptyState;
-    use Concerns\HasHeadings;
-    use Concerns\HasMax;
-    use Concerns\HasRelationship;
-    use Concerns\HasRootDirectory;
-    use Concerns\HasSelectAction;
-    use Concerns\HasSidebarItems;
-    use Concerns\HasTooltip;
+    use HasAcceptedTypes;
+    use HasEmptyState;
+    use HasHeadings;
+    use HasMax;
+    use HasRelationship;
+    use HasRootDirectory;
+    use HasSelectAction;
+    use HasSidebarItems;
+    use HasTooltip;
 
     protected string $view = 'cabinet-filament::components.forms.file-input';
 

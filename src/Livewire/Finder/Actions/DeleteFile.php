@@ -2,6 +2,7 @@
 
 namespace Cabinet\Filament\Livewire\Finder\Actions;
 
+use Filament\Actions\Action;
 use Cabinet\Cabinet;
 use Cabinet\Filament\Livewire\Finder;
 use Cabinet\Filament\Livewire\Finder\Actions\Concerns\ValidatesFileAttributes;
@@ -10,7 +11,7 @@ use Closure;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 
-class DeleteFile extends \Filament\Actions\Action
+class DeleteFile extends Action
 {
     use ValidatesFileAttributes;
 
