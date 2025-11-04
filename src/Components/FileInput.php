@@ -57,8 +57,6 @@ class FileInput extends Field
                         return;
                     }
 
-//                    dd($component, $component->getStatePath(), $statePath, $files);
-
                     if ($component->isDisabled()) {
                         throw new AuthorizationException('Das Feld ist deaktiviert.');
                     }
