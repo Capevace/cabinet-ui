@@ -37,9 +37,8 @@
                     return;
                 }
 
-                console.log(data.statePath);
-
-                this.$wire.dispatchFormEvent('fileInput:select', '{{ $statePath }}', data.files);
+{{--                this.$wire.dispatchFormEvent('fileInput:select', '{{ $statePath }}', data.files);--}}
+                {!! $getSelectActionMountJS(filesVariable: 'data.files') !!}
             },
 
             openFinder() {

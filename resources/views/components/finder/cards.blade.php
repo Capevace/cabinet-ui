@@ -53,7 +53,7 @@
     </ul>
 
     @if (count($files) === 0)
-        <x-filament-tables::empty-state
+        <x-filament::empty-state
             heading="{{ __('cabinet::messages.empty-folder') }}"
             description="{{ __('cabinet::messages.drag-or-add-files') }}"
             icon="heroicon-o-folder"

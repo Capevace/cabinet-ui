@@ -2,6 +2,7 @@
 
 namespace Cabinet\Filament\Components;
 
+use Filament\Actions\Action;
 use Filament\Forms\Components\Field;
 use Cabinet\Filament\Components\Concerns\HasAcceptedTypes;
 use Cabinet\Filament\Components\Concerns\HasEmptyState;
@@ -19,6 +20,7 @@ use Cabinet\File;
 use Cabinet\FileType;
 use Exception;
 use Filament\Notifications\Notification;
+use Filament\Support\Assets\Js;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -50,6 +52,11 @@ class FileInput extends Field
 
         $this->selectAction(fn () => $this->makeSelectAction());
 
+        $this->registerActions([
+            fn (FileInput $component) => $this->makeConfirmSelectionAction($component)
+        ]);
+
+        /*
         $this->registerListeners([
             'fileInput:select' => [
                 function (FileInput $component, string $statePath, array $files) {
@@ -116,6 +123,42 @@ class FileInput extends Field
                 }
             ]
         ]);
+        */
+    }
+
+    public function makeConfirmSelectionAction(FileInput $component): Action
+    {
+        return Action::make('confirmSelection')
+            ->action(function (array $arguments) use ($component) {
+                ['statePath' => $statePath, 'files' => $files] = $arguments;
+
+                if ($component->getStatePath() !== $statePath || !is_array($files)) {
+                    return;
+                }
+
+                if ($component->isDisabled()) {
+                    throw new AuthorizationException('Das Feld ist deaktiviert.');
+                }
+
+                try {
+                    $component->validateAndSetFiles($files);
+                } catch (Exception $e) {
+                    report($e);
+
+                    Notification::make()
+                        ->title(__('cabinet::messages.cannot-select-file'))
+                        ->body(__('cabinet::messages.unknown-error'))
+                        ->danger()
+                        ->send();
+                }
+            });
+    }
+
+    public function getSelectActionMountJS(string $filesVariable): string
+    {
+        $statePath = $this->getStatePath();
+
+        return "this.\$wire.mountAction('confirmSelection', { statePath: '{$statePath}', files: {$filesVariable} });";
     }
 
     public function validateAndSetFiles(array $files)
