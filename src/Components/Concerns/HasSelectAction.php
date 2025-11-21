@@ -39,14 +39,7 @@ trait HasSelectAction
      */
     public function makeSelectAction(string $type = 'form'): Action
     {
-        $class = match ($type) {
-            'form' => Action::class,
-            'infolist' => Action::class,
-            default => throw new Exception("Unknown action type: $type")
-        };
-
-
-        return $class::make('select')
+        return Action::make('select')
             ->label(fn () => trans_choice('cabinet::actions.select-file', $this->getMax() ?? 9999))
 //            ->modalContent(
 //                view('cabinet-filament::modal-test', [

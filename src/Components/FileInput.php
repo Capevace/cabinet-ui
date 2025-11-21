@@ -129,6 +129,9 @@ class FileInput extends Field
     public function makeConfirmSelectionAction(FileInput $component): Action
     {
         return Action::make('confirmSelection')
+            ->extraAttributes([
+                'class' => 'hidden'
+            ])
             ->action(function (array $arguments) use ($component) {
                 ['statePath' => $statePath, 'files' => $files] = $arguments;
 
@@ -158,7 +161,18 @@ class FileInput extends Field
     {
         $statePath = $this->getStatePath();
 
-        return "this.\$wire.mountAction('confirmSelection', { statePath: '{$statePath}', files: {$filesVariable} });";
+        $action = $this->makeConfirmSelectionAction($this);
+
+        // Make sure to not escape $filesVariable, as we want Alpine to treat it as a JS variable, not a string
+        $data = "{ statePath: '{$statePath}', files: {$filesVariable} }";
+
+        $context = [
+            'recordKey' => $this->getRecord()?->getKey(),
+            'schemaComponent' => $this->getInheritanceKey()
+        ];
+        $context_variables = \Illuminate\Support\Js::from($context)->toHtml();
+
+        return "this.\$wire.mountAction('{$action->getName()}', {$data}, {$context_variables});";
     }
 
     public function validateAndSetFiles(array $files)
