@@ -19,7 +19,7 @@ class CabinetFilamentServiceProvider extends PackageServiceProvider
     {
         parent::boot();
 
-        Livewire::component('cabinet::finder', Finder::class);
+        Livewire::component('cabinet.finder', Finder::class);
 
         FilamentView::registerRenderHook(
             'panels::body.end',
