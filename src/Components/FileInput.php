@@ -2,28 +2,30 @@
 
 namespace Cabinet\Filament\Components;
 
-use Filament\Actions\Action;
-use Filament\Forms\Components\Field;
+use Cabinet\Exceptions\FileTypeNotAccepted;
+use Cabinet\Exceptions\InvalidFileData;
+use Cabinet\Facades\Cabinet;
 use Cabinet\Filament\Components\Concerns\HasAcceptedTypes;
 use Cabinet\Filament\Components\Concerns\HasEmptyState;
 use Cabinet\Filament\Components\Concerns\HasHeadings;
 use Cabinet\Filament\Components\Concerns\HasMax;
 use Cabinet\Filament\Components\Concerns\HasRelationship;
+use Cabinet\Filament\Components\Concerns\HasReorderAction;
 use Cabinet\Filament\Components\Concerns\HasRootDirectory;
 use Cabinet\Filament\Components\Concerns\HasSelectAction;
 use Cabinet\Filament\Components\Concerns\HasSidebarItems;
 use Cabinet\Filament\Components\Concerns\HasTooltip;
-use Cabinet\Exceptions\FileTypeNotAccepted;
-use Cabinet\Exceptions\InvalidFileData;
-use Cabinet\Facades\Cabinet;
 use Cabinet\File;
 use Cabinet\FileType;
 use Exception;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Field;
 use Filament\Notifications\Notification;
 use Filament\Support\Assets\Js;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+
 use function Livewire\trigger;
 
 class FileInput extends Field
@@ -33,6 +35,7 @@ class FileInput extends Field
     use HasHeadings;
     use HasMax;
     use HasRelationship;
+    use HasReorderAction;
     use HasRootDirectory;
     use HasSelectAction;
     use HasSidebarItems;
@@ -42,18 +45,17 @@ class FileInput extends Field
 
     protected function setUp(): void
     {
-        $this->emptyStateLabel(fn () =>
-            trans_choice('cabinet::messages.no-files-selected', $this->getMax() ?? 9999)
+        $this->emptyStateLabel(fn () => trans_choice('cabinet::messages.no-files-selected', $this->getMax() ?? 9999)
         );
 
-        $this->heading(fn () =>
-            trans_choice('cabinet::actions.select-file', $this->getMax() ?? 9999)
+        $this->heading(fn () => trans_choice('cabinet::actions.select-file', $this->getMax() ?? 9999)
         );
 
         $this->selectAction(fn () => $this->makeSelectAction());
 
         $this->registerActions([
-            fn (FileInput $component) => $this->makeConfirmSelectionAction($component)
+            fn (FileInput $component) => $this->makeConfirmSelectionAction($component),
+            fn (FileInput $component) => $this->makeReorderAction($component),
         ]);
 
         /*
@@ -130,12 +132,12 @@ class FileInput extends Field
     {
         return Action::make('confirmSelection')
             ->extraAttributes([
-                'class' => 'hidden'
+                'class' => 'hidden',
             ])
             ->action(function (array $arguments) use ($component) {
                 ['statePath' => $statePath, 'files' => $files] = $arguments;
 
-                if ($component->getStatePath() !== $statePath || !is_array($files)) {
+                if ($component->getStatePath() !== $statePath || ! is_array($files)) {
                     return;
                 }
 
@@ -168,7 +170,7 @@ class FileInput extends Field
 
         $context = [
             'recordKey' => $this->getRecord()?->getKey(),
-            'schemaComponent' => $this->getInheritanceKey()
+            'schemaComponent' => $this->getInheritanceKey(),
         ];
         $context_variables = \Illuminate\Support\Js::from($context)->toHtml();
 
@@ -197,7 +199,7 @@ class FileInput extends Field
                 throw new FileTypeNotAccepted("Unknown file type: {$json}");
             }
 
-            throw new InvalidFileData('Error validating files: ' . json_encode($validator->errors()->toArray(), JSON_PRETTY_PRINT));
+            throw new InvalidFileData('Error validating files: '.json_encode($validator->errors()->toArray(), JSON_PRETTY_PRINT));
         }
 
         $files = collect($files)
@@ -214,7 +216,7 @@ class FileInput extends Field
 
         if ($max === 1) {
             $this->state($files->first());
-        } else if ($max <= 0 || $max === null) {
+        } elseif ($max <= 0 || $max === null) {
             $this->state($files->all());
         } else {
             $this->state($files->take($max)->all());
@@ -231,7 +233,7 @@ class FileInput extends Field
             ->concat($state
                 // If state is an array and does not have a source key
                 // we assume it is a list of files
-                ? is_array($state) && !isset($state['source'])
+                ? is_array($state) && ! isset($state['source'])
                     ? $state
                     : [$state]
                 : []

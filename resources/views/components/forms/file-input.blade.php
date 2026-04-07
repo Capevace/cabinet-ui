@@ -85,7 +85,7 @@
             },
 
             moveFiles(from, to) {
-                this.$wire.dispatchFormEvent('fileInput:reorder', '{{ $statePath }}', { from, to });
+                {!! $getReorderActionMountJS(fromVariable: 'from', toVariable: 'to') !!}
             }
         }"
     >
