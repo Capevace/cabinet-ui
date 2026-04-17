@@ -10,6 +10,8 @@ use Carbon\Carbon;
 use Closure;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Illuminate\Support\Facades\URL;
+use Livewire\Component;
 
 class DownloadFile extends Action
 {
@@ -28,7 +30,7 @@ class DownloadFile extends Action
         $this->iconButton();
         $this->icon('heroicon-o-arrow-down-tray');
 
-        $this->action(function (Cabinet $cabinet, array $data, array $arguments, DownloadFile $action) {
+        $this->action(function (Cabinet $cabinet, array $data, array $arguments, DownloadFile $action, Component $livewire) {
 //            $action->verifyFileArguments($arguments);
 
             if ($arguments['type'] === (new \Cabinet\Types\Folder)->slug()) {
@@ -41,7 +43,37 @@ class DownloadFile extends Action
 
             abort_if($file === null, 404);
 
-            return redirect($file->url());
+            $ext = str($file->path())->afterLast('.')->toString();
+            $url = \Cabinet\Facades\Cabinet::generateDownloadUrl($file);
+
+            $name = str($file->name)
+                ->replace('\'', '')
+                ->append(".{$ext}")
+                ->slug()
+                ->toString();
+
+            $livewire->js(expression: (<<<JS
+                (() => {
+                    try {
+                        browser.downloads.download({
+                            url: '{$url}',
+                            filename: '{$name}',
+                        });
+                    } catch (error) {
+                        console.error(error);
+
+                        const a = document.createElement('a');
+                        a.href = '{$url}';
+                        a.target = '_blank';
+                        a.download = '{$name}';
+
+                        document.body.appendChild(a);
+
+                        a.click();
+                        document.body.removeChild(a);
+                    }
+                })();
+            JS));
         });
     }
 }

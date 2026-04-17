@@ -60,7 +60,6 @@ class ShareFile extends Action
                         ->extraAttributes([
                             'x-on:click' => new HtmlString("navigator.clipboard.writeText('{$state}');")
                         ])
-                        ->submit()
                 )
                 ->autofocus()
                 ->required()

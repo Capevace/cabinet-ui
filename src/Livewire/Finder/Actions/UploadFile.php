@@ -18,6 +18,7 @@ use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Support\Arr;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Number;
 use League\Flysystem\UnableToCheckFileExistence;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -43,7 +44,7 @@ class UploadFile extends Action
 
         $this->modalWidth('sm');
         $this->modalAlignment('center');
-		$this->modalSubmitActionLabel('Hochladen');
+		$this->modalSubmitActionLabel(__('cabinet::actions.upload-files.submit'));
         $this->extraAttributes([
             'x-on:click' => new HtmlString("setTimeout(() => document.getElementById('mountedActionsData.0.name').focus(), 200)")
         ]);
@@ -57,7 +58,7 @@ class UploadFile extends Action
         $this->schema([
             Select::make('form')
                 ->hiddenLabel()
-                ->label('Art')
+                ->label(__('cabinet::actions.upload-files.type'))
                 ->live()
                 ->options(fn (Cabinet $cabinet) => $cabinet->getSourceOptions())
                 ->selectablePlaceholder(false)
@@ -67,9 +68,13 @@ class UploadFile extends Action
                     ? $cabinet->getSourceForm(
                         sourceName: $get('form'),
                         fileUploadComponent: fn () => FileUpload::make('files')
-                            ->label('Dateien')
+                            ->label(__('cabinet::actions.upload-files.files'))
                             ->multiple()
                             ->required()
+                            ->maxSize(fn () => config('cabinet.max_file_size_kb'))
+                            ->validationMessages([
+                                'file' => __('cabinet::actions.upload-files.max-size-any', ['value' => Number::fileSize(config('cabinet.max_file_size_kb') * 1000)]),
+                            ])
                             ->acceptedFileTypes(fn (Cabinet $cabinet) =>
 								$cabinet
                                     ->validFileTypes()

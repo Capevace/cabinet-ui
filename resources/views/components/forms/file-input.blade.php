@@ -28,18 +28,21 @@
 >
     <section
 		class="@container rounded-lg ring-1 ring-gray-950/10 bg-white dark:ring-white/20 dark:bg-white/5"
-		x-data="{
+        @cabinet:file-input:{{  $getLivewire()->getId() }}:confirm.window="confirmSelection($event.detail)"
+        x-data="{
             state: @entangle($statePath).live,
             loading: false,
 
             confirmSelection(data) {
+                // Make sure this is the correct Livewire component
                 if (data.statePath !== @js($statePath)) {
                     return;
                 }
 
-                console.log(data.statePath);
+                console.log(data, @js($statePath));
 
-                this.$wire.dispatchFormEvent('fileInput:select', '{{ $statePath }}', data.files);
+{{--                this.$wire.dispatchFormEvent('fileInput:select', '{{ $statePath }}', data.files);--}}
+                {!! $getSelectActionMountJS(filesVariable: 'data.files') !!}
             },
 
             openFinder() {
@@ -82,10 +85,9 @@
             },
 
             moveFiles(from, to) {
-                this.$wire.dispatchFormEvent('fileInput:reorder', '{{ $statePath }}', { from, to });
+                {!! $getReorderActionMountJS(fromVariable: 'from', toVariable: 'to') !!}
             }
         }"
-        @cabinet:file-input:{{  $getLivewire()->getId() }}:confirm.window="confirmSelection($event.detail)"
     >
 		<header
 			class="flex items-center border-b px-2 py-2 dark:border-gray-700"
