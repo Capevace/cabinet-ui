@@ -323,18 +323,22 @@
 
 
         <section class="flex-1 min-h-64 flex flex-col overflow-hidden">
-            <nav class="bg-gray-100 dark:bg-gray-900 px-4 py-2 h-12 flex items-start justify-between md:items-center flex-col md:flex-row">
-                <x-cabinet-filament::finder.breadcrumbs :$breadcrumbs />
+            <nav class="bg-gray-100 dark:bg-gray-900 px-4 py-2 h-12 flex items-start justify-between md:items-center flex-col md:flex-row gap-x-5">
+                <x-cabinet-filament::finder.breadcrumbs
+                    :$breadcrumbs
+                    :$folder
+                    class=""
+                />
 
                 <div
-                    class="flex items-center w-full md:w-auto"
+                    class="flex items-center"
                     :class="{
                         'justify-end': selectedFiles.length === 0,
-                        'justify-between': selectedFiles.length > 0,
+                        'justify-end': selectedFiles.length > 0,
                     }"
                 >
                     <div
-                        class="flex items-center space-x-4 text-xs mr-5"
+                        class="flex items-center space-x-4 text-xs"
                     >
                         <x-filament::dropdown>
                             <x-slot:trigger>
