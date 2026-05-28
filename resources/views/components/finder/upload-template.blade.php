@@ -16,7 +16,7 @@
 			}"
 		>
 			<p class="font-medium line-clamp-2" x-text="upload.name"></p>
-			<p class="text-gray-700 dark:text-gray-400 text-sm" x-text="formatProgress"></p>
+			<p class="text-gray-700 dark:text-gray-400 text-sm" x-text="formatProgress()"></p>
 		</div>
 	</li>
 </template>

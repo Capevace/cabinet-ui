@@ -34,6 +34,7 @@ use League\Flysystem\UnableToCheckFileExistence;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Session;
 use Livewire\Component;
 
 use Cabinet\Folder;
@@ -79,9 +80,54 @@ class Finder extends Component implements HasForms, HasActions
 
     public array $selectedFiles = [];
 
+    #[Session]
     public bool $showSidebar = true;
 
+    #[Session]
+    public string $viewMode = 'grid';
+
+    /**
+     * When true, the sidebar shows a directory tree instead of sidebar item shortcuts.
+     * Set this at component mount time: @livewire(Finder::class, ['treeSidebar' => true])
+     * or by passing it through the `open` event (for modal usage, always false).
+     */
+    #[Locked]
+    public bool $treeSidebar = false;
+
+    /**
+     * When true and no sidebar items are explicitly provided, the sidebar will
+     * automatically be populated with all root-level (parentless) directories.
+     */
+    #[Locked]
+    public bool $autoSidebar = false;
+
 	public array $uploadedFiles = [];
+
+    /**
+     * Returns the direct child folders of a given folder for the tree sidebar.
+     * Called via $wire.call('getSubfolders', folderId) from Alpine.
+     *
+     * @return array<array{id: string, name: string, source: string}>
+     */
+    public function getSubfolders(string $folderId): array
+    {
+        $folder = Cabinet::folder($folderId);
+
+        if ($folder === null) {
+            return [];
+        }
+
+        return $folder->files()
+            ->filter(fn ($item) => $item instanceof Folder)
+            ->sortBy(fn (Folder $f) => mb_strtolower($f->name))
+            ->map(fn (Folder $f) => [
+                'id'     => $f->id,
+                'name'   => $f->name,
+                'source' => $f->source ?? '',
+            ])
+            ->values()
+            ->all();
+    }
 
     #[On('open')]
     public function open(
@@ -222,6 +268,8 @@ class Finder extends Component implements HasForms, HasActions
 
 		$this->selectionMode = null;
         $this->selectedFiles = [];
+
+        $this->dispatch('cabinet:finder-closed');
     }
 
     public function refresh()
@@ -285,6 +333,7 @@ class Finder extends Component implements HasForms, HasActions
         $this->folderId = $id;
 
         $this->refresh();
+        $this->dispatch('cabinet:folder-opened');
     }
 
     public function moveFile(string $source, string $id, ?string $folderId)
@@ -463,6 +512,47 @@ class Finder extends Component implements HasForms, HasActions
         return RefreshFile::make('refreshFile');
     }
 
+    /**
+     * Load file references for the detail panel.
+     *
+     * Cabinet resolves its own filerefs. Host applications can listen to the
+     * `cabinet:file-references-loaded` browser event and inject additional
+     * references by dispatching `cabinet:extra-references` with their data,
+     * OR they can override this method by extending the Finder component.
+     *
+     * @return array<array{label: string, url: string|null}>
+     */
+    public function loadFileReferences(string $source, string $id): array
+    {
+        $file = Cabinet::file($source, $id);
+
+        if ($file === null) {
+            return [];
+        }
+
+        $references = [];
+
+        // Resolve Cabinet's own file references (filerefs)
+        if (method_exists(Cabinet::class, 'resolveFileReferences') || method_exists(\Cabinet\Facades\Cabinet::getFacadeRoot(), 'resolveFileReferences')) {
+            try {
+                $resolved = \Cabinet\Facades\Cabinet::resolveFileReferences($file);
+
+                if ($resolved) {
+                    foreach ($resolved as $ref) {
+                        $references[] = [
+                            'label' => is_array($ref) ? ($ref['label'] ?? (string) $ref) : (string) $ref,
+                            'url'   => is_array($ref) ? ($ref['url'] ?? null) : null,
+                        ];
+                    }
+                }
+            } catch (\Throwable $e) {
+                // resolveFileReferences may not be implemented — silently ignore
+            }
+        }
+
+        return $references;
+    }
+
     public function moveFileInSelection(int $from, int $to)
     {
         // As PHP:
@@ -563,6 +653,23 @@ class Finder extends Component implements HasForms, HasActions
 
 	public function render()
     {
+        // Auto-populate sidebar with root-level directories when enabled
+        // and no explicit sidebar items have been provided.
+        if ($this->autoSidebar && empty($this->sidebarItems)) {
+            $directoryClass = config('cabinet.directory_model', \Cabinet\Models\Directory::class);
+
+            $this->sidebarItems = $directoryClass::whereNull('parent_directory_id')
+                ->get()
+                ->map(fn ($directory) => new SidebarItemDto(
+                    id: $directory->id,
+                    label: $directory->translation_key
+                        ? trans_choice($directory->translation_key, 9999)
+                        : $directory->name,
+                    icon: 'heroicon-o-folder',
+                ))
+                ->all();
+        }
+
         $view = $this->modal
             ? 'cabinet-filament::livewire.finder-modal'
             : 'cabinet-filament::livewire.finder-page';
@@ -579,6 +686,8 @@ class Finder extends Component implements HasForms, HasActions
             'selectedSidebarItem' => $this->selectedSidebarItem,
             'replaceableThumbnailUrl' => $this->replaceableThumbnailUrl,
             'selectedFiles' => $this->selectedFiles,
+            'treeSidebar' => $this->treeSidebar,
+            'initialFolderId' => $this->initialFolderId,
         ];
 
         return view($view, $data);

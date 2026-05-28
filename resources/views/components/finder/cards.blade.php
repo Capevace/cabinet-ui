@@ -1,8 +1,4 @@
-@props(['files', 'acceptedTypeChecker', 'previewAction' => null, 'hasSidebar' => false])
-
-@php
-
-@endphp
+@props(['files', 'acceptedTypeChecker', 'previewAction' => null, 'hasSidebar' => false, 'viewMode' => 'grid', 'showSidebar' => true])
 
 <div
     class="flex-1"
@@ -24,14 +20,15 @@
         }
     "
 >
+    {{-- Grid view --}}
     <ul
         {{ $attributes->class([
             'grid px-4 py-4 gap-5 overflow-y-auto',
+            'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5' => !$showSidebar,
+            'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' => $showSidebar,
         ]) }}
-        :class="{
-            'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 asd': !showSidebar,
-            'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4': showSidebar
-        }"
+        x-show="viewMode === 'grid'"
+        @if ($viewMode !== 'grid') x-cloak @endif
     >
         <x-cabinet-filament::finder.upload-template />
 
@@ -51,6 +48,54 @@
             @endif
         @endforeach
     </ul>
+
+    {{-- List view --}}
+    <div
+        class="px-4 py-2"
+        x-show="viewMode === 'list'"
+        @if ($viewMode !== 'list') x-cloak @endif
+    >
+        {{-- Upload placeholders in list mode --}}
+        <template x-for="(upload, index) of uploads">
+            <div
+                :key="upload.id + index"
+                class="flex items-center gap-3 px-3 py-2 border-b border-gray-200 dark:border-gray-800 last:border-0 text-sm text-gray-500"
+            >
+                <x-filament::loading-indicator class="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <span class="flex-1 truncate" x-text="upload.name"></span>
+                <span class="text-xs text-gray-400" x-text="Math.round(upload.progress * 100) + '%'"></span>
+            </div>
+        </template>
+
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-800">
+                    <th class="text-left py-2 px-2 font-medium text-xs text-gray-500 dark:text-gray-400 w-8"></th>
+                    <th class="text-left py-2 px-2 font-medium text-xs text-gray-500 dark:text-gray-400">{{ __('cabinet::messages.file-name') }}</th>
+                    <th class="text-left py-2 px-2 font-medium text-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell">{{ __('cabinet::messages.file-type') }}</th>
+                    <th class="text-left py-2 px-2 font-medium text-xs text-gray-500 dark:text-gray-400 hidden md:table-cell">{{ __('cabinet::messages.file-size') }}</th>
+                    <th class="text-right py-2 px-2 font-medium text-xs text-gray-500 dark:text-gray-400 w-8"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($files as $file)
+                    @if ($file instanceof \Cabinet\File)
+                        <x-cabinet-filament::finder.list.file
+                            wire:key="list-file-{{ $file->source }}-{{ $file->id }}"
+                            :$file
+                            :preview-action="$previewAction($file->toIdentifier())"
+                            :disabled="!$acceptedTypeChecker->isAccepted($file->type)"
+                        />
+                    @elseif ($file instanceof \Cabinet\Folder)
+                        <x-cabinet-filament::finder.list.folder
+                            :folder="$file"
+                            wire:key="list-folder-{{ $file->source }}-{{ $file->id }}"
+                        />
+                    @endif
+                @endforeach
+            </tbody>
+        </table>
+    </div>
 
     @if (count($files) === 0)
         <x-filament::empty-state

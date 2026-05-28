@@ -16,7 +16,7 @@
                 @class([
                     'inline-flex gap-x-2 line-clamp-1',
                     'w-full flex-1' => $breadcrumb->folderId === $folder->id,
-                    'flex-shrink w-min max-w-[5rem]' => $breadcrumb->folderId !== $folder->id
+                    'flex-shrink w-auto' => $breadcrumb->folderId !== $folder->id
                 ])
                 wire:key="{{ $breadcrumb->folderId }}"
                 @dragover.prevent="draggingOverFolder = '{{ $breadcrumb->folderId }}'"

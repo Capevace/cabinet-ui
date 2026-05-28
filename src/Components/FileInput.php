@@ -15,6 +15,7 @@ use Cabinet\Filament\Components\Concerns\HasRootDirectory;
 use Cabinet\Filament\Components\Concerns\HasSelectAction;
 use Cabinet\Filament\Components\Concerns\HasSidebarItems;
 use Cabinet\Filament\Components\Concerns\HasTooltip;
+use Cabinet\Filament\Components\Concerns\HasTreeSidebar;
 use Cabinet\File;
 use Cabinet\FileType;
 use Exception;
@@ -40,6 +41,7 @@ class FileInput extends Field
     use HasSelectAction;
     use HasSidebarItems;
     use HasTooltip;
+    use HasTreeSidebar;
 
     protected string $view = 'cabinet-filament::components.forms.file-input';
 

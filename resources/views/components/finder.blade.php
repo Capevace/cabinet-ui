@@ -11,6 +11,9 @@
     'selectedSidebarItem' => null,
     'replaceableThumbnailUrl' => null,
     'selectedFiles' => [],
+    'treeSidebar' => false,
+    'initialFolderId' => null,
+    'rounded' => true,
 ])
 
 <article
@@ -26,6 +29,11 @@
         draggingVirtualFile: null,
         draggingOverFolder: null,
         uploads: [],
+
+        viewMode: @entangle('viewMode').live,
+
+        // Detail panel state (browse mode only)
+        detailFile: null,
 
         init() {
             this.previousBodyOverflow = document.body.style.overflow;
@@ -45,13 +53,15 @@
 				}
 
 				e.preventDefault();
-
-				console.log(e.dataTransfer.files);
 			});
         },
 
         destroy() {
             document.body.style.overflow = this.previousBodyOverflow;
+        },
+
+        setViewMode(mode) {
+            this.viewMode = mode;
         },
 
         toggleFileSelection(file) {
@@ -68,8 +78,25 @@
             }
         },
 
+        handleFileClick(file) {
+            if (this.selectionEnabled) {
+                this.toggleFileSelection(file);
+            } else {
+                // Browse mode: open detail panel
+                if (this.detailFile && this.detailFile.id === file.id && this.detailFile.source === file.source) {
+                    this.detailFile = null; // clicking same file closes the panel
+                } else {
+                    this.detailFile = file;
+                }
+            }
+        },
+
         isFileSelected(file) {
             return this.selectedFiles.some(f => f.id === file.id && f.source === file.source);
+        },
+
+        isDetailFile(file) {
+            return this.detailFile && this.detailFile.id === file.id && this.detailFile.source === file.source;
         },
 
         confirmFileSelection() {
@@ -223,33 +250,31 @@
 			);
 		},
 
-		moveFileInSelection(event, fromIndex, toIndex) {
-            setTimeout(() => {
-                    const file = this.selectedFiles[fromIndex];
-                    const files = [...this.selectedFiles];
+		moveFileInSelection(fromIndex, toIndex) {
+            const file = this.selectedFiles[fromIndex];
+            const files = [...this.selectedFiles];
 
-                    files.splice(fromIndex, 1);
-                    files.splice(toIndex, 0, file);
+            files.splice(fromIndex, 1);
+            files.splice(toIndex, 0, file);
 
-                    this.selectedFiles = files;
-                    this.selectedFiles = files;
-            }, 1000);
+            this.selectedFiles = files;
         },
     }"
     @class([
-        'border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 rounded-xl overflow-hidden flex flex-col flex-1',
+        'border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 overflow-hidden flex flex-col flex-1',
         'hidden pointer-events-none' => $this->folderId === null,
         'pointer-events-auto' => $this->folderId !== null,
         'shadow-xl' => $modal,
         'h-full' => !$modal,
+        'rounded-xl' => $rounded ?? false,
     ])
 	@style(['min-height: 500px;', 'height: 90vh;' => $modal])
 >
+    {{-- Selection mode header — only shown in selection mode (modal) --}}
     @if ($selectionMode)
         <header class="w-full bg-gray-100 dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 py-2">
             <div>
                 <h3 class="font-medium text-lg">{{ trans_choice('cabinet::actions.select-file', $selectionMode?->max === 1 ? 1 : 9999) }}</h3>
-    {{--            <p class="text-sm text-gray-700 dark:text-gray-400">Select a file to get started with Cabinet</p>--}}
             </div>
 
             <nav class="flex items-center space-x-5">
@@ -273,23 +298,24 @@
     @endif
 
     <div class="flex flex-1 overflow-hidden">
-        @if(count($sidebarItems) > 0)
+        {{-- Left sidebar: location shortcuts OR directory tree --}}
+        @if(count($sidebarItems) > 0 || $treeSidebar)
             <aside
                 wire:key="sidebar"
-                class="bg-gray-100 dark:bg-gray-900 border-r-2 border-gray-200 dark:border-gray-800 px-2 py-2"
+                class="bg-gray-100 dark:bg-gray-900 border-r-2 border-gray-200 dark:border-gray-800 px-2 py-2 flex-shrink-0 transition-all duration-200 flex flex-col overflow-y-auto"
                 :class="{
                     'w-64': showSidebar,
                     'w-16': !showSidebar,
                 }"
             >
                 <header
-                    class="flex items-center mb-1.5"
+                    class="flex items-center mb-1.5 flex-shrink-0"
                     :class="{
                         'space-x-2 justify-between': showSidebar,
                         'justify-center': !showSidebar,
                     }"
                 >
-                    <p class="text-xs text-gray-500" x-show="showSidebar">Orte</p>
+                    <p class="text-xs text-gray-500" x-show="showSidebar">{{ __('cabinet::messages.locations') }}</p>
                     <figure>
                         <x-filament::icon-button
                             x-show="!showSidebar"
@@ -306,110 +332,140 @@
                             @click="$wire.showSidebar = !$wire.showSidebar"
                         />
                     </figure>
-
                 </header>
 
-                <ul class="grid gap-2">
-                    @foreach($sidebarItems as $item)
-                        <x-cabinet-filament::finder.sidebar-item
-                            wire:key="{{ $item->id }}"
-                            :active="$selectedSidebarItem?->id === $item->id"
-                            :$item
+                @if($treeSidebar)
+                    {{-- Tree sidebar --}}
+                    <div x-show="showSidebar" class="flex-1 overflow-y-auto">
+                        <x-cabinet-filament::finder.tree-sidebar
+                            :initial-folder-id="$initialFolderId"
+                            :root-folder-name="$folder?->name ?? ''"
                         />
-                    @endforeach
-                </ul>
+                    </div>
+                @else
+                    {{-- Shortcuts sidebar --}}
+                    <ul class="grid gap-2">
+                        @foreach($sidebarItems as $item)
+                            <x-cabinet-filament::finder.sidebar-item
+                                wire:key="{{ $item->id }}"
+                                :active="$selectedSidebarItem?->id === $item->id"
+                                :$item
+                            />
+                        @endforeach
+                    </ul>
+                @endif
             </aside>
         @endif
 
 
         <section class="flex-1 min-h-64 flex flex-col overflow-hidden">
-            <nav class="bg-gray-100 dark:bg-gray-900 px-4 py-2 h-12 flex items-start justify-between md:items-center flex-col md:flex-row gap-x-5">
+            {{-- Toolbar: breadcrumbs + actions --}}
+            <nav class="bg-gray-100 dark:bg-gray-900 px-4 py-2 min-h-12 flex items-center justify-between gap-x-5">
                 <x-cabinet-filament::finder.breadcrumbs
                     :$breadcrumbs
                     :$folder
-                    class=""
+                    class="flex-1 min-w-0"
                 />
 
-                <div
-                    class="flex items-center"
-                    :class="{
-                        'justify-end': selectedFiles.length === 0,
-                        'justify-end': selectedFiles.length > 0,
-                    }"
-                >
-                    <div
-                        class="flex items-center space-x-4 text-xs"
-                    >
-                        <x-filament::dropdown>
-                            <x-slot:trigger>
-                                <x-filament::link url="#">
-                                    <span x-text="selectedFiles.length"></span> ausgewählt
-                                </x-filament::link>
-{{--                                <pre x-html="JSON.stringify(selectedFiles, null, 2)"></pre>--}}
-                            </x-slot:trigger>
-
-                            <x-filament::dropdown.list>
-                                <div
-                                    x-show="selectedFiles.length > 0"
-                                    x-data="{
-                                        makeThumbnailUrl(file) {
-                                            return '{{ $replaceableThumbnailUrl }}'
-                                                .replaceAll('REPLACE_SOURCE', file.source)
-                                                .replaceAll('REPLACE_ID', file.id);
-                                        }
-                                    }"
-                                    x-sortable
-                                    x-on:end="moveFileInSelection($event.oldIndex, $event.newIndex)"
-                                    wire:ignore
-                                >
-                                    <template wire:ignore x-for="selectedFile in selectedFiles" :key="selectedFile.id">
-                                        <div
-                                            class="flex items-center gap-3 px-1 py-1"
-                                            :id="selectedFile.id"
-                                            :key="selectedFile.id"
-                                            :x-sortable-item="selectedFile.id"
-                                            x-sortable-handle
-                                        >
-                                            <img
-                                                :src="makeThumbnailUrl(selectedFile)"
-                                                class="w-6 aspect-square object-cover object-center rounded flex-shrink-0"
-                                            />
-                                            <p class="block flex-1 truncate" x-text="selectedFile.name"></p>
-
-                                            <x-filament::icon-button
-                                                icon="heroicon-o-x-mark"
-                                                class="flex-shrink-0 mx-0"
-                                                size="xs"
-                                                color="gray"
-                                                @click.prevent="toggleFileSelection(selectedFile)"
-                                            />
-                                        </div>
-{{--                                    @endforeach--}}
-                                    </template>
-                                </div>
-                            </x-filament::dropdown.list>
-                        </x-filament::dropdown>
-
-                        <x-filament::icon-button
-                            color="gray"
-                            icon="heroicon-o-x-circle"
-                            size="sm"
-                            @click="selectedFiles = []"
-                            class="block lg:hidden"
-                            tooltip="Auswahl aufheben"
-                        />
-                        <x-filament::button
-                            color="gray"
-                            icon="heroicon-o-x-circle"
-                            icon-position="after"
-                            size="sm"
-                            @click="selectedFiles = []"
-                            class="hidden lg:flex"
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    {{-- Selection summary (selection mode only) --}}
+                    @if ($selectionMode)
+                        <div
+                            class="flex items-center space-x-2 text-xs"
+                            x-show="selectedFiles.length > 0"
                         >
-                            Auswahl aufheben
-                        </x-filament::button>
+                            <x-filament::dropdown>
+                                <x-slot:trigger>
+                                    <x-filament::link url="#">
+                                        <span x-text="selectedFiles.length"></span>&nbsp;{{ __('cabinet::messages.selected') }}
+                                    </x-filament::link>
+                                </x-slot:trigger>
+
+                                <x-filament::dropdown.list>
+                                    <div
+                                        x-show="selectedFiles.length > 0"
+                                        x-data="{
+                                            makeThumbnailUrl(file) {
+                                                return '{{ $replaceableThumbnailUrl }}'
+                                                    .replaceAll('REPLACE_SOURCE', file.source)
+                                                    .replaceAll('REPLACE_ID', file.id);
+                                            }
+                                        }"
+                                        x-sortable
+                                        x-on:end="moveFileInSelection($event.oldIndex, $event.newIndex)"
+                                        wire:ignore
+                                    >
+                                        <template wire:ignore x-for="selectedFile in selectedFiles" :key="selectedFile.id">
+                                            <div
+                                                class="flex items-center gap-3 px-1 py-1"
+                                                :id="selectedFile.id"
+                                                :key="selectedFile.id"
+                                                :x-sortable-item="selectedFile.id"
+                                                x-sortable-handle
+                                            >
+                                                <img
+                                                    :src="makeThumbnailUrl(selectedFile)"
+                                                    class="w-6 aspect-square object-cover object-center rounded flex-shrink-0"
+                                                />
+                                                <p class="block flex-1 truncate" x-text="selectedFile.name"></p>
+
+                                                <x-filament::icon-button
+                                                    icon="heroicon-o-x-mark"
+                                                    class="flex-shrink-0 mx-0"
+                                                    size="xs"
+                                                    color="gray"
+                                                    @click.prevent="toggleFileSelection(selectedFile)"
+                                                />
+                                            </div>
+                                        </template>
+                                    </div>
+                                </x-filament::dropdown.list>
+                            </x-filament::dropdown>
+
+                            <x-filament::icon-button
+                                color="gray"
+                                icon="heroicon-o-x-circle"
+                                size="sm"
+                                @click="selectedFiles = []"
+                                class="block lg:hidden"
+                                :tooltip="__('cabinet::actions.clear-selection')"
+                            />
+                            <x-filament::button
+                                color="gray"
+                                icon="heroicon-o-x-circle"
+                                icon-position="after"
+                                size="sm"
+                                @click="selectedFiles = []"
+                                class="hidden lg:flex"
+                            >
+                                {{ __('cabinet::actions.clear-selection') }}
+                            </x-filament::button>
+                        </div>
+                    @endif
+
+                    {{-- View mode toggle (always shown) --}}
+                    <div class="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <button
+                            type="button"
+                            @click="setViewMode('grid')"
+                            :class="viewMode === 'grid' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
+                            class="px-2 py-1.5 transition-colors"
+                            title="{{ __('cabinet::actions.view-grid') }}"
+                        >
+                            @svg('heroicon-o-squares-2x2', 'w-4 h-4')
+                        </button>
+                        <button
+                            type="button"
+                            @click="setViewMode('list')"
+                            :class="viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
+                            class="px-2 py-1.5 transition-colors"
+                            title="{{ __('cabinet::actions.view-list') }}"
+                        >
+                            @svg('heroicon-o-list-bullet', 'w-4 h-4')
+                        </button>
                     </div>
 
+                    {{-- Toolbar actions (upload, create folder) --}}
                     <nav class="flex items-center gap-3">
                         @foreach($toolbarActions as $action)
                             {{ $action }}
@@ -417,34 +473,48 @@
                     </nav>
                 </div>
             </nav>
-            <main
-				class="relative flex-1 overflow-y-auto transition-colors flex flex-col"
-			>
-                <x-cabinet-filament::finder.cards
-                    :$acceptedTypeChecker
-                    :has-sidebar="count($sidebarItems) > 0"
-                    :max="$selectionMode?->max"
-                    :$files
-                    :preview-action="$this->previewFileAction"
-                />
 
-                <template x-if="!draggingVirtualFile && draggingFiles > 0">
+            {{-- Main content area: file grid/list + optional detail sidebar --}}
+            <div class="flex flex-1 overflow-hidden">
+                <main
+                    class="relative flex-1 overflow-y-auto transition-colors flex flex-col"
+                >
+                    <x-cabinet-filament::finder.cards
+                        :$acceptedTypeChecker
+                        :has-sidebar="count($sidebarItems) > 0"
+                        :max="$selectionMode?->max"
+                        :$files
+                        :preview-action="$this->previewFileAction"
+                        :view-mode="$this->viewMode"
+                        :show-sidebar="$this->showSidebar"
+                    />
 
-                    <div
-                        class="z-10 absolute inset-0 flex flex-col items-center justify-center pointer-events-none bg-gray-200/50 dark:bg-gray-800/50 backdrop-blur font-medium"
-                        x-show="!draggingVirtualFile && draggingFiles > 0"
-                        x-transition:enter="transition ease-out duration-150"
-                        x-transition:enter-start="opacity-0"
-                        x-transition:enter-end="opacity-100"
-                        x-transition:leave="transition ease-in duration-150"
-                        x-transition:leave-start="opacity-100"
-                        x-transition:leave-end="opacity-0"
-                    >
-                        @svg('heroicon-o-cloud-arrow-up', 'w-20 h-20 text-gray-500 mb-5 bg-white border shadow-inner border-gray-200 rounded-full p-2')
-                        <p class="filter text-gray-700 bg-gray-50 border shadow-inner border-gray-200 rounded-xl px-3 py-1">Dateien hier ablegen, um sie hochzuladen</p>
-                    </div>
-                </template>
-            </main>
+                    <template x-if="!draggingVirtualFile && draggingFiles > 0">
+
+                        <div
+                            class="z-10 absolute inset-0 flex flex-col items-center justify-center pointer-events-none bg-gray-200/50 dark:bg-gray-800/50 backdrop-blur font-medium"
+                            x-show="!draggingVirtualFile && draggingFiles > 0"
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0"
+                            x-transition:enter-end="opacity-100"
+                            x-transition:leave="transition ease-in duration-150"
+                            x-transition:leave-start="opacity-100"
+                            x-transition:leave-end="opacity-0"
+                        >
+                            @svg('heroicon-o-cloud-arrow-up', 'w-20 h-20 text-gray-500 mb-5 bg-white border shadow-inner border-gray-200 rounded-full p-2')
+                            <p class="filter text-gray-700 bg-gray-50 border shadow-inner border-gray-200 rounded-xl px-3 py-1">{{ __('cabinet::messages.drop-files-to-upload') }}</p>
+                        </div>
+                    </template>
+                </main>
+
+                {{-- Detail sidebar — browse mode only, shown when a file is clicked --}}
+                @if (!$selectionMode)
+                    <x-cabinet-filament::finder.detail-panel
+                        :$files
+                        wire:key="detail-panel-{{ $folder?->id }}"
+                    />
+                @endif
+            </div>
         </section>
     </div>
 

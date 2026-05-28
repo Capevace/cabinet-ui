@@ -54,9 +54,34 @@
 				   close() {
 					   this.visible = false;
 					   this.items = [];
-						 this.data = {};
+					   this.data = {};
 				   }
 			   });
+
+				// Directory tree store — shared between modal and page modes
+				Alpine.store('cabinetTree', {
+					nodes: {},
+
+					ensure(id, name) {
+						if (!this.nodes[id]) {
+							this.nodes[id] = { id, name, children: [], loaded: false, loading: false, expanded: false };
+						}
+					},
+
+					getName(id) { return this.nodes[id]?.name ?? id; },
+					getChildren(id) { return this.nodes[id]?.children ?? []; },
+					isLoaded(id) { return this.nodes[id]?.loaded ?? false; },
+					isLoading(id) { return this.nodes[id]?.loading ?? false; },
+					isExpanded(id) { return this.nodes[id]?.expanded ?? false; },
+
+					setExpanded(id, val) { this.ensure(id, id); this.nodes[id] = { ...this.nodes[id], expanded: val }; },
+					setLoading(id, val) { this.ensure(id, id); this.nodes[id] = { ...this.nodes[id], loading: val }; },
+					setLoaded(id, val)  { this.ensure(id, id); this.nodes[id] = { ...this.nodes[id], loaded: val }; },
+					setChildren(id, children) { this.ensure(id, id); this.nodes[id] = { ...this.nodes[id], children }; },
+
+					// Reset all tree state (called when the Finder is closed / re-opened)
+					reset() { this.nodes = {}; }
+				});
 			});
 		</script>
 
@@ -77,19 +102,22 @@
 
 		>
 			@if($this->folderId)
-				<x-cabinet-filament::finder
-					:modal="true"
-					:$folder
-					:$files
-					:$breadcrumbs
-					:$toolbarActions
-					:$contextMenus
-					:$selectionMode
-					:$sidebarItems
-					:$acceptedTypeChecker
-					:$selectedSidebarItem
-					:$replaceableThumbnailUrl
-				/>
+		<x-cabinet-filament::finder
+				:modal="true"
+				:$folder
+				:$files
+				:$breadcrumbs
+				:$toolbarActions
+				:$contextMenus
+				:$selectionMode
+				:$sidebarItems
+				:$acceptedTypeChecker
+				:$selectedSidebarItem
+				:$replaceableThumbnailUrl
+				:$selectedFiles
+				:$treeSidebar
+				:$initialFolderId
+			/>
 			@endif
 		</div>
 	</div>

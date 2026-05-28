@@ -10,6 +10,7 @@ use Cabinet\Filament\Components\Concerns\HasRootDirectory;
 use Cabinet\Filament\Components\Concerns\HasSelectAction;
 use Cabinet\Filament\Components\Concerns\HasSidebarItems;
 use Cabinet\Filament\Components\Concerns\HasTooltip;
+use Cabinet\Filament\Components\Concerns\HasTreeSidebar;
 use Cabinet\Exceptions\FileTypeNotAccepted;
 use Cabinet\Exceptions\InvalidFileData;
 use Cabinet\Facades\Cabinet;
@@ -32,6 +33,7 @@ class FileEntry extends Entry
     use HasRootDirectory;
     use HasSelectAction;
     use HasSidebarItems;
+    use HasTreeSidebar;
 
     protected string $view = 'cabinet-filament::components.forms.file-entry';
 

@@ -5,8 +5,8 @@
     :class="{
         'opacity-60 cursor-not-allowed': selectionEnabled && (!canSelectMore && !isFileSelected(@js($file->toIdentifier())) || {{ $disabled ? 'true' : 'false' }}),
         'ring-2 ring-primary-500': isFileSelected(@js($file->toIdentifier())),
+        'ring-2 ring-gray-400 dark:ring-gray-500': !selectionEnabled && isDetailFile(@js($file->toIdentifier())),
         'opacity-50': draggingVirtualFile,
-{{--        'pointer-events-none': draggingFiles > 0,--}}
     }"
     x-on:dragend="
         draggingVirtualFile = false;
@@ -55,10 +55,9 @@
     <button
         class="flex flex-col flex-1 w-full text-left"
         type="button"
-{{--        x-bind:disabled="(!canSelectMore && !isFileSelected(@js($file->toIdentifier()))) || {{ $disabled ? 'true' : 'false' }}"--}}
         @click="
             if (!(selectionEnabled && (!canSelectMore && !isFileSelected(@js($file->toIdentifier())) || {{ $disabled ? 'true' : 'false' }}))) {
-                toggleFileSelection(@js($file->toIdentifier()));
+                handleFileClick(@js($file->toIdentifier()));
             }
         "
         @contextmenu="openContextMenu('{{ $file->type->slug() }}', $event, @js($file->toIdentifier()))"
