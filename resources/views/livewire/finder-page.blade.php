@@ -47,9 +47,12 @@
         :$sidebarItems
         :$acceptedTypeChecker
         :$selectedSidebarItem
-        :$replaceableThumbnailUrl
         :$selectedFiles
         :$treeSidebar
         :$initialFolderId
+        :thumbnail-urls="$thumbnailUrls"
+        :file-urls="$fileUrls"
+        :lazy-load="$lazyLoad"
+        :has-more-files="$hasMoreFiles"
     />
 </div>

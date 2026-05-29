@@ -11,7 +11,13 @@
 
     The Livewire `loadFileReferences` method returns an array of references:
     [
-        ['label' => 'Post: Hello World', 'url' => '/admin/posts/1', 'icon' => 'heroicon-o-document-text'],
+        [
+            'label'        => 'Post: Hello World',
+            'url'          => '/admin/posts/1',
+            'icon'         => 'heroicon-o-document-text',
+            'typeLabel'    => 'Post',
+            'thumbnailUrl' => null,
+        ],
         ...
     ]
 --}}
@@ -34,10 +40,6 @@
             $wire.loadFileReferences(detailFile.source, detailFile.id)
                 .then((refs) => {
                     this.references = refs ?? [];
-                    this.loading = false;
-                })
-                .catch(() => {
-                    this.references = [];
                     this.loading = false;
                 });
         }
@@ -65,18 +67,48 @@
                             target="_blank"
                             class="flex items-center gap-2 text-xs text-primary-600 dark:text-primary-400 hover:underline py-0.5 group"
                         >
-                            <span class="w-4 h-4 flex-shrink-0 text-gray-400 group-hover:text-primary-500">
-                                @svg('heroicon-o-arrow-top-right-on-square', 'w-3.5 h-3.5')
-                            </span>
+                            <template x-if="ref.thumbnailUrl">
+                                <img
+                                    :src="ref.thumbnailUrl"
+                                    class="w-5 h-5 rounded object-cover flex-shrink-0"
+                                    alt=""
+                                />
+                            </template>
+                            <template x-if="!ref.thumbnailUrl">
+                                <span class="w-4 h-4 flex-shrink-0 text-gray-400 group-hover:text-primary-500">
+                                    @svg('heroicon-o-arrow-top-right-on-square', 'w-3.5 h-3.5')
+                                </span>
+                            </template>
                             <span class="truncate" x-text="ref.label"></span>
+                            <template x-if="ref.typeLabel">
+                                <span
+                                    class="ml-auto text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 flex-shrink-0"
+                                    x-text="ref.typeLabel"
+                                ></span>
+                            </template>
                         </a>
                     </template>
                     <template x-if="!ref.url">
                         <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 py-0.5">
-                            <span class="w-4 h-4 flex-shrink-0 text-gray-400">
-                                @svg('heroicon-o-link', 'w-3.5 h-3.5')
-                            </span>
+                            <template x-if="ref.thumbnailUrl">
+                                <img
+                                    :src="ref.thumbnailUrl"
+                                    class="w-5 h-5 rounded object-cover flex-shrink-0"
+                                    alt=""
+                                />
+                            </template>
+                            <template x-if="!ref.thumbnailUrl">
+                                <span class="w-4 h-4 flex-shrink-0 text-gray-400">
+                                    @svg('heroicon-o-link', 'w-3.5 h-3.5')
+                                </span>
+                            </template>
                             <span class="truncate" x-text="ref.label"></span>
+                            <template x-if="ref.typeLabel">
+                                <span
+                                    class="ml-auto text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 flex-shrink-0"
+                                    x-text="ref.typeLabel"
+                                ></span>
+                            </template>
                         </div>
                     </template>
                 </li>

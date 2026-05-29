@@ -49,33 +49,7 @@ class FileEntry extends Entry
 
         $this->selectAction(fn () => $this->makeSelectAction('infolist'));
 
-//        $this->registerListeners([
-//            'fileInput:select' => [
-//                function (FileEntry $component, string $statePath, array $files) {
-//                    if ($component->getStatePath() !== $statePath) {
-//                        return;
-//                    }
-//
-////                    dd($component, $component->getStatePath(), $statePath, $files);
-//
-//                    if ($component->isDisabled()) {
-//                        throw new AuthorizationException('Das Feld ist deaktiviert.');
-//                    }
-//
-//                    try {
-//                        $component->validateAndSetFiles($files);
-//                    } catch (Exception $e) {
-//                        report($e);
-//
-//                        Notification::make()
-//                            ->title(__('cabinet::messages.cannot-select-file'))
-//                            ->body(__('cabinet::messages.unknown-error'))
-//                            ->danger()
-//                            ->send();
-//                    }
-//                }
-//            ]
-//        ]);
+
     }
 
     public function validateAndSetFiles(array $files)

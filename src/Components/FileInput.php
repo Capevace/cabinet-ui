@@ -18,11 +18,8 @@ use Cabinet\Filament\Components\Concerns\HasTooltip;
 use Cabinet\Filament\Components\Concerns\HasTreeSidebar;
 use Cabinet\File;
 use Cabinet\FileType;
-use Exception;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Field;
-use Filament\Notifications\Notification;
-use Filament\Support\Assets\Js;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -60,74 +57,7 @@ class FileInput extends Field
             fn (FileInput $component) => $this->makeReorderAction($component),
         ]);
 
-        /*
-        $this->registerListeners([
-            'fileInput:select' => [
-                function (FileInput $component, string $statePath, array $files) {
-                    if ($component->getStatePath() !== $statePath) {
-                        return;
-                    }
 
-                    if ($component->isDisabled()) {
-                        throw new AuthorizationException('Das Feld ist deaktiviert.');
-                    }
-
-                    try {
-                        $component->validateAndSetFiles($files);
-                    } catch (Exception $e) {
-                        report($e);
-
-                        Notification::make()
-                            ->title(__('cabinet::messages.cannot-select-file'))
-                            ->body(__('cabinet::messages.unknown-error'))
-                            ->danger()
-                            ->send();
-                    }
-                }
-            ],
-            'fileInput:reorder' => [
-                function (FileInput $component, string $statePath, array $move) {
-                    try {
-                        $from = Arr::get($move, 'from');
-                        $to = Arr::get($move, 'to');
-
-                        if ($from === null || $to === null) {
-                            return;
-                        }
-
-                        $fromIndex = (int) $from;
-                        $toIndex = (int) $to;
-
-                        if ($component->getStatePath() !== $statePath) {
-                            return;
-                        }
-
-                        if ($component->isDisabled()) {
-                            throw new AuthorizationException('Das Feld ist deaktiviert.');
-                        }
-
-                        $files = Collection::wrap($component->getState());
-
-                        if ($fromIndex < 0 || $fromIndex >= $files->count() || $toIndex < 0 || $toIndex >= $files->count()) {
-                            return;
-                        }
-
-                        $files->splice($toIndex, 0, $files->splice($fromIndex, 1));
-
-                        $this->validateAndSetFiles($files->values()->all());
-                    } catch (Exception $e) {
-                        report($e);
-
-                        Notification::make()
-                            ->title(__('cabinet::messages.cannot-reorder-file'))
-                            ->body(__('cabinet::messages.unknown-error'))
-                            ->danger()
-                            ->send();
-                    }
-                }
-            ]
-        ]);
-        */
     }
 
     public function makeConfirmSelectionAction(FileInput $component): Action
@@ -147,17 +77,7 @@ class FileInput extends Field
                     throw new AuthorizationException('Das Feld ist deaktiviert.');
                 }
 
-                try {
-                    $component->validateAndSetFiles($files);
-                } catch (Exception $e) {
-                    report($e);
-
-                    Notification::make()
-                        ->title(__('cabinet::messages.cannot-select-file'))
-                        ->body(__('cabinet::messages.unknown-error'))
-                        ->danger()
-                        ->send();
-                }
+                $component->validateAndSetFiles($files);
             });
     }
 

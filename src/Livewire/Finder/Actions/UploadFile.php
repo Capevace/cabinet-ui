@@ -19,7 +19,6 @@ use Filament\Forms\Components\TextInput;
 use Illuminate\Support\Arr;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Number;
-use League\Flysystem\UnableToCheckFileExistence;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class UploadFile extends Action
@@ -71,6 +70,7 @@ class UploadFile extends Action
                             ->label(__('cabinet::actions.upload-files.files'))
                             ->multiple()
                             ->required()
+                            ->imageEditor()
                             ->maxSize(fn () => config('cabinet.max_file_size_kb'))
                             ->validationMessages([
                                 'file' => __('cabinet::actions.upload-files.max-size-any', ['value' => Number::fileSize(config('cabinet.max_file_size_kb') * 1000)]),
@@ -114,11 +114,7 @@ class UploadFile extends Action
 
     public function upload(Cabinet $cabinet, TemporaryUploadedFile $file, array $data, string $source)
     {
-        try {
-            if (!$file->exists()) {
-                return null;
-            }
-        } catch (UnableToCheckFileExistence $exception) {
+        if (!$file->exists()) {
             return null;
         }
 

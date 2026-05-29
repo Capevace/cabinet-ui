@@ -3,9 +3,7 @@
 namespace Cabinet\Filament\Components\Concerns;
 
 use Cabinet\Filament\Components\FileInput;
-use Exception;
 use Filament\Actions\Action;
-use Filament\Notifications\Notification;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
 
@@ -37,18 +35,8 @@ trait HasReorderAction
                     return;
                 }
 
-                try {
-                    $files->splice($toIndex, 0, $files->splice($fromIndex, 1));
-                    $component->validateAndSetFiles($files->values()->all());
-                } catch (Exception $e) {
-                    report($e);
-
-                    Notification::make()
-                        ->title(__('cabinet::messages.cannot-reorder-file'))
-                        ->body(__('cabinet::messages.unknown-error'))
-                        ->danger()
-                        ->send();
-                }
+                $files->splice($toIndex, 0, $files->splice($fromIndex, 1));
+                $component->validateAndSetFiles($files->values()->all());
             });
     }
 

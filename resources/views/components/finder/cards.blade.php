@@ -1,7 +1,7 @@
-@props(['files', 'acceptedTypeChecker', 'previewAction' => null, 'hasSidebar' => false, 'viewMode' => 'grid', 'showSidebar' => true])
+@props(['files', 'acceptedTypeChecker', 'previewAction' => null, 'hasSidebar' => false, 'viewMode' => 'grid', 'showSidebar' => true, 'thumbnailUrls' => [], 'lazyLoad' => false, 'hasMoreFiles' => false])
 
 <div
-    class="flex-1"
+    class="flex-1 flex flex-col"
     @dragenter="
         if (!$event.dataTransfer.getData('application/cabinet-identifier') && draggingVirtualFile === false) {
             draggingFiles++;
@@ -39,11 +39,14 @@
                     :$file
                     :preview-action="$previewAction($file->toIdentifier())"
                     :disabled="!$acceptedTypeChecker->isAccepted($file->type)"
+                    :stable-thumbnail-url="$thumbnailUrls[$file->source . ':' . $file->id]['normal'] ?? null"
+                    @if (!$lazyLoad) x-show="!searchQuery || @json(strtolower($file->name)).includes(searchQuery.toLowerCase())" @endif
                 />
             @elseif ($file instanceof \Cabinet\Folder)
                 <x-cabinet-filament::finder.cards.folder
                     :folder="$file"
                     wire:key="folder-{{ $file->source }}-{{ $file->id }}"
+                    @if (!$lazyLoad) x-show="!searchQuery || @json(strtolower($file->name)).includes(searchQuery.toLowerCase())" @endif
                 />
             @endif
         @endforeach
@@ -71,9 +74,25 @@
             <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800">
                     <th class="text-left py-2 px-2 font-medium text-xs text-gray-500 dark:text-gray-400 w-8"></th>
-                    <th class="text-left py-2 px-2 font-medium text-xs text-gray-500 dark:text-gray-400">{{ __('cabinet::messages.file-name') }}</th>
-                    <th class="text-left py-2 px-2 font-medium text-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell">{{ __('cabinet::messages.file-type') }}</th>
+                    <th wire:click="toggleSort('name')" class="text-left py-2 px-2 font-medium text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 select-none">
+                        {{ __('cabinet::messages.file-name') }}
+                        @if ($this->sortColumn === 'name')
+                            @svg($this->sortDirection === 'asc' ? 'heroicon-o-chevron-up' : 'heroicon-o-chevron-down', 'w-3 h-3 inline-block ml-1')
+                        @endif
+                    </th>
+                    <th wire:click="toggleSort('type')" class="text-left py-2 px-2 font-medium text-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 select-none">
+                        {{ __('cabinet::messages.file-type') }}
+                        @if ($this->sortColumn === 'type')
+                            @svg($this->sortDirection === 'asc' ? 'heroicon-o-chevron-up' : 'heroicon-o-chevron-down', 'w-3 h-3 inline-block ml-1')
+                        @endif
+                    </th>
                     <th class="text-left py-2 px-2 font-medium text-xs text-gray-500 dark:text-gray-400 hidden md:table-cell">{{ __('cabinet::messages.file-size') }}</th>
+                    <th wire:click="toggleSort('created')" class="text-left py-2 px-2 font-medium text-xs text-gray-500 dark:text-gray-400 hidden md:table-cell cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 select-none">
+                        {{ __('cabinet::messages.file-created') }}
+                        @if ($this->sortColumn === 'created')
+                            @svg($this->sortDirection === 'asc' ? 'heroicon-o-chevron-up' : 'heroicon-o-chevron-down', 'w-3 h-3 inline-block ml-1')
+                        @endif
+                    </th>
                     <th class="text-right py-2 px-2 font-medium text-xs text-gray-500 dark:text-gray-400 w-8"></th>
                 </tr>
             </thead>
@@ -85,17 +104,33 @@
                             :$file
                             :preview-action="$previewAction($file->toIdentifier())"
                             :disabled="!$acceptedTypeChecker->isAccepted($file->type)"
+                            :stable-thumbnail-url="$thumbnailUrls[$file->source . ':' . $file->id]['tiny'] ?? null"
+                            @if (!$lazyLoad) x-show="!searchQuery || @json(strtolower($file->name)).includes(searchQuery.toLowerCase())" @endif
                         />
                     @elseif ($file instanceof \Cabinet\Folder)
                         <x-cabinet-filament::finder.list.folder
                             :folder="$file"
                             wire:key="list-folder-{{ $file->source }}-{{ $file->id }}"
+                            @if (!$lazyLoad) x-show="!searchQuery || @json(strtolower($file->name)).includes(searchQuery.toLowerCase())" @endif
                         />
                     @endif
                 @endforeach
             </tbody>
         </table>
     </div>
+
+    @if ($hasMoreFiles)
+        <div class="flex justify-center py-4">
+            <x-filament::button
+                wire:click="loadMore"
+                wire:loading.attr="disabled"
+                color="gray"
+                size="sm"
+            >
+                {{ __('cabinet::actions.load-more') }}
+            </x-filament::button>
+        </div>
+    @endif
 
     @if (count($files) === 0)
         <x-filament::empty-state

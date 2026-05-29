@@ -9,12 +9,21 @@
     'selectionMode' => null,
     'sidebarItems' => collect(),
     'selectedSidebarItem' => null,
-    'replaceableThumbnailUrl' => null,
     'selectedFiles' => [],
     'treeSidebar' => false,
     'initialFolderId' => null,
     'rounded' => true,
+    'thumbnailUrls' => [],
+    'fileUrls' => [],
+    'lazyLoad' => false,
+    'hasMoreFiles' => false,
 ])
+
+@php
+    if(!isset($lazyLoad) && isset($hasMoreFiles)) {
+        $lazyLoad = $hasMoreFiles;
+    }
+@endphp
 
 <article
     wire:key="finder"
@@ -31,6 +40,12 @@
         uploads: [],
 
         viewMode: @entangle('viewMode').live,
+
+        // Search state (browse mode only)
+        searchQuery: '',
+
+        // Bulk selection state (browse mode only)
+        bulkSelectedFiles: @entangle('bulkSelectedFiles').live,
 
         // Detail panel state (browse mode only)
         detailFile: null,
@@ -78,9 +93,28 @@
             }
         },
 
-        handleFileClick(file) {
+        toggleBulkSelection(file) {
+            const key = `${file.source}:${file.id}`;
+            const index = this.bulkSelectedFiles.findIndex(f => `${f.source}:${f.id}` === key);
+
+            if (index !== -1) {
+                this.bulkSelectedFiles = this.bulkSelectedFiles.filter((_, i) => i !== index);
+            } else {
+                this.bulkSelectedFiles = [...this.bulkSelectedFiles, file];
+            }
+        },
+
+        handleFileClick(file, event) {
             if (this.selectionEnabled) {
                 this.toggleFileSelection(file);
+            } else if (event.metaKey || event.ctrlKey) {
+                // Meta+click toggles bulk selection
+                this.toggleBulkSelection(file);
+                this.detailFile = null;
+            } else if (this.bulkSelectedFiles.length > 0) {
+                // If bulk selection active and normal click, clear bulk and show detail
+                this.bulkSelectedFiles = [];
+                this.detailFile = file;
             } else {
                 // Browse mode: open detail panel
                 if (this.detailFile && this.detailFile.id === file.id && this.detailFile.source === file.source) {
@@ -93,6 +127,10 @@
 
         isFileSelected(file) {
             return this.selectedFiles.some(f => f.id === file.id && f.source === file.source);
+        },
+
+        isBulkSelected(file) {
+            return this.bulkSelectedFiles.some(f => f.id === file.id && f.source === file.source);
         },
 
         isDetailFile(file) {
@@ -268,6 +306,22 @@
         'h-full' => !$modal,
         'rounded-xl' => $rounded ?? false,
     ])
+    @if (!$modal)
+        @cabinet:url-state-changed.window="
+            const url = new URL(window.location.href);
+            if ($event.detail.folder !== null) {
+                url.searchParams.set('folder', $event.detail.folder);
+            } else {
+                url.searchParams.delete('folder');
+            }
+            if ($event.detail.selected !== null) {
+                url.searchParams.set('selected', $event.detail.selected);
+            } else {
+                url.searchParams.delete('selected');
+            }
+            history.pushState({}, '', url);
+        "
+    @endif
 	@style(['min-height: 500px;', 'height: 90vh;' => $modal])
 >
     {{-- Selection mode header — only shown in selection mode (modal) --}}
@@ -384,13 +438,6 @@
                                 <x-filament::dropdown.list>
                                     <div
                                         x-show="selectedFiles.length > 0"
-                                        x-data="{
-                                            makeThumbnailUrl(file) {
-                                                return '{{ $replaceableThumbnailUrl }}'
-                                                    .replaceAll('REPLACE_SOURCE', file.source)
-                                                    .replaceAll('REPLACE_ID', file.id);
-                                            }
-                                        }"
                                         x-sortable
                                         x-on:end="moveFileInSelection($event.oldIndex, $event.newIndex)"
                                         wire:ignore
@@ -403,10 +450,7 @@
                                                 :x-sortable-item="selectedFile.id"
                                                 x-sortable-handle
                                             >
-                                                <img
-                                                    :src="makeThumbnailUrl(selectedFile)"
-                                                    class="w-6 aspect-square object-cover object-center rounded flex-shrink-0"
-                                                />
+                                                @svg('heroicon-o-document', 'w-5 h-5 text-gray-400 flex-shrink-0')
                                                 <p class="block flex-1 truncate" x-text="selectedFile.name"></p>
 
                                                 <x-filament::icon-button
@@ -441,6 +485,51 @@
                                 {{ __('cabinet::actions.clear-selection') }}
                             </x-filament::button>
                         </div>
+                    @endif
+
+                    {{-- Search input (browse mode only) --}}
+                    @if (!$selectionMode)
+                        <x-filament::input.wrapper
+                            inline-prefix
+                            class="w-44"
+                        >
+                            <x-slot name="prefix">
+                                @svg('heroicon-o-magnifying-glass', 'w-4 h-4 text-gray-400')
+                            </x-slot>
+                            @if ($lazyLoad)
+                                <x-filament::input
+                                    type="text"
+                                    wire:model.live.debounce.100ms="searchQuery"
+                                    :placeholder="__('cabinet::messages.search-files')"
+                                />
+                                <x-slot name="suffix">
+                                    <button
+                                        type="button"
+                                        wire:click="$set('searchQuery', '')"
+                                        class="fi-input-wrp-suffix p-1 -mr-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                    >
+                                        @svg('heroicon-o-x-mark', 'w-4 h-4 text-gray-400')
+                                    </button>
+                                </x-slot>
+                            @else
+                                <x-filament::input
+                                    type="text"
+                                    x-model.debounce.100ms="searchQuery"
+                                    :placeholder="__('cabinet::messages.search-files')"
+                                />
+                                <x-slot name="suffix">
+                                    <button
+                                        type="button"
+                                        x-show="searchQuery"
+                                        x-cloak
+                                        @click="searchQuery = ''"
+                                        class="fi-input-wrp-suffix p-1 -mr-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                    >
+                                        @svg('heroicon-o-x-mark', 'w-4 h-4 text-gray-400')
+                                    </button>
+                                </x-slot>
+                            @endif
+                        </x-filament::input.wrapper>
                     @endif
 
                     {{-- View mode toggle (always shown) --}}
@@ -487,6 +576,9 @@
                         :preview-action="$this->previewFileAction"
                         :view-mode="$this->viewMode"
                         :show-sidebar="$this->showSidebar"
+                        :thumbnail-urls="$thumbnailUrls"
+                        :lazy-load="$lazyLoad"
+                        :has-more-files="$hasMoreFiles"
                     />
 
                     <template x-if="!draggingVirtualFile && draggingFiles > 0">
@@ -511,6 +603,8 @@
                 @if (!$selectionMode)
                     <x-cabinet-filament::finder.detail-panel
                         :$files
+                        :thumbnail-urls="$thumbnailUrls"
+                        :file-urls="$fileUrls"
                         wire:key="detail-panel-{{ $folder?->id }}"
                     />
                 @endif

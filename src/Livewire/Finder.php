@@ -6,7 +6,9 @@ use Cabinet\Filament\Livewire\Finder\SelectionMode;
 use Cabinet\Facades\Cabinet;
 use Cabinet\Filament\Livewire\Finder\AcceptableTypeChecker;
 use Cabinet\Filament\Livewire\Finder\Actions\CreateFolder;
+use Cabinet\Filament\Livewire\Finder\Actions\DeleteBulk;
 use Cabinet\Filament\Livewire\Finder\Actions\DeleteFile;
+use Cabinet\Filament\Livewire\Finder\Actions\DownloadBulk;
 use Cabinet\Filament\Livewire\Finder\Actions\DownloadFile;
 use Cabinet\Filament\Livewire\Finder\Actions\PreviewFile;
 use Cabinet\Filament\Livewire\Finder\Actions\RefreshFile;
@@ -29,17 +31,14 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
-use League\Flysystem\UnableToCheckFileExistence;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Session;
 use Livewire\Component;
-
+use Illuminate\Support\Str;
 use Cabinet\Folder;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
-use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
 
 /**
  * @property-read Collection<File> $files
@@ -49,6 +48,7 @@ use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
  * @property-read Folder|null $folder
  * @property-read Folder|null $initialFolder
  * @property-read AcceptableTypeChecker $acceptableTypeChecker
+ * @property-read int $totalFileCount
  */
 class Finder extends Component implements HasForms, HasActions
 {
@@ -57,6 +57,13 @@ class Finder extends Component implements HasForms, HasActions
 
     #[Locked]
     public bool $modal = true;
+
+    /**
+     * Whether to sync folder/selection state to URL query params.
+     * Enabled automatically in full-screen (non-modal) mode.
+     */
+    #[Locked]
+    public bool $urlState = false;
 
     #[Locked]
 	public ?string $initialFolderId = null;
@@ -80,11 +87,31 @@ class Finder extends Component implements HasForms, HasActions
 
     public array $selectedFiles = [];
 
+    public array $bulkSelectedFiles = [];
+
     #[Session]
     public bool $showSidebar = true;
 
     #[Session]
     public string $viewMode = 'grid';
+
+    #[Session]
+    public string $sortColumn = 'name';
+
+    #[Session]
+    public string $sortDirection = 'asc';
+
+    /**
+     * When true, files are loaded in batches of 100 with a "Load more" button.
+     * When false, all files are shown immediately.
+     * Search becomes server-side when lazy loading is enabled.
+     */
+    #[Locked]
+    public bool $lazyLoad = true;
+
+    public int $fileLimit = 100;
+
+    public string $searchQuery = '';
 
     /**
      * When true, the sidebar shows a directory tree instead of sidebar item shortcuts.
@@ -144,6 +171,8 @@ class Finder extends Component implements HasForms, HasActions
 
         $this->initialFolderId = $folderId;
         $this->folderId = $folderId;
+        $this->fileLimit = 100;
+        $this->searchQuery = '';
 
         $this->sidebarItems = collect($sidebarItems)
             ->map(fn (array $item) => SidebarItemDto::fromLivewire($item))
@@ -178,77 +207,54 @@ class Finder extends Component implements HasForms, HasActions
             return;
         }
 
-        try {
-            $invalidFiles = $files
-                ->filter(function (TemporaryUploadedFile $file) {
-                    $type = Cabinet::determineFileTypeFromMime($file->getMimeType());
+        $invalidFiles = $files
+            ->filter(function (TemporaryUploadedFile $file) {
+                $type = Cabinet::determineFileTypeFromMime($file->getMimeType());
 
-                    return $this->globalAcceptableTypeChecker->isAccepted($type) === false;
-                });
+                return $this->globalAcceptableTypeChecker->isAccepted($type) === false;
+            });
 
-            $validFiles = $files->diff($invalidFiles);
+        $validFiles = $files->diff($invalidFiles);
 
-            if ($invalidFiles->isNotEmpty()) {
-                $names = $invalidFiles
-                    ->map(fn (TemporaryUploadedFile $file) => $file->getClientOriginalName());
+        if ($invalidFiles->isNotEmpty()) {
+            $names = $invalidFiles
+                ->map(fn (TemporaryUploadedFile $file) => $file->getClientOriginalName());
 
-                // If there are more than 3 files, only show the first 3 and add an ellipsis
-                if ($names->count() > 3) {
-                    $names = $names->take(3)->push('...');
-                }
-
-                Notification::make()
-                    ->warning()
-                    ->title(trans_choice('cabinet::messages.invalid-file-types', $invalidFiles->count()))
-                    ->body($names->join(', '))
-                    ->send();
-
-                // Delete the temporary files
-                $invalidFiles->each->delete();
+            // If there are more than 3 files, only show the first 3 and add an ellipsis
+            if ($names->count() > 3) {
+                $names = $names->take(3)->push('...');
             }
 
-
-                $validFiles
-                    // Upload the file
-                    ->each(function (TemporaryUploadedFile $file) use ($folder, $source, $invalidFiles) {
-                        try {
-                            $source->upload($folder, $file);
-                        } catch (FileIsTooBig $exception) {
-                            report($exception);
-
-                            $maxFileSize = \Spatie\MediaLibrary\Support\File::getHumanReadableSize(config('media-library.max_file_size'));
-
-                            $invalidFiles->push($file);
-
-                            Notification::make()
-                                ->danger()
-                                ->title(__('cabinet::messages.file-size-exceeded', ['size' => $maxFileSize]))
-                                ->send();
-                        }
-
-                        // Delete the file from the uploads directory, now that it's been uploaded to destination
-                        $file->delete();
-                    });
-
-
-            $skippedFilesText = $invalidFiles->count() > 0
-                ? trans_choice('cabinet::messages.files-skipped', $invalidFiles->count())
-                : null;
-
             Notification::make()
-                ->success()
-                ->title(trans_choice('cabinet::messages.files-uploaded-successfully', $validFiles->count()))
-                ->body($skippedFilesText)
+                ->warning()
+                ->title(trans_choice('cabinet::messages.invalid-file-types', $invalidFiles->count()))
+                ->body($names->join(', '))
                 ->send();
 
-			$this->refresh();
-        } catch (UnableToCheckFileExistence $exception) {
-            Notification::make()
-                ->danger()
-                ->title(__('cabinet::messages.unknown-error'))
-                ->body(app()->hasDebugModeEnabled() ? $$exception->getMessage() : null)
-                ->send();
+            // Delete the temporary files
+            $invalidFiles->each->delete();
         }
+
+        $validFiles
+            // Upload the file
+            ->each(function (TemporaryUploadedFile $file) use ($folder, $source, $invalidFiles) {
+                $source->upload($folder, $file);
+
+                // Delete the file from the uploads directory, now that it's been uploaded to destination
+                $file->delete();
+            });
+
+        $skippedFilesText = $invalidFiles->count() > 0
+            ? trans_choice('cabinet::messages.files-skipped', $invalidFiles->count())
+            : null;
+
+        Notification::make()
+            ->success()
+            ->title(trans_choice('cabinet::messages.files-uploaded-successfully', $validFiles->count()))
+            ->body($skippedFilesText)
+            ->send();
+
+        $this->refresh();
 	}
 
 //    #[On('openFinder')]
@@ -268,8 +274,137 @@ class Finder extends Component implements HasForms, HasActions
 
 		$this->selectionMode = null;
         $this->selectedFiles = [];
+        $this->bulkSelectedFiles = [];
 
         $this->dispatch('cabinet:finder-closed');
+    }
+
+    public function mount(): void
+    {
+        // URL state is only meaningful in full-screen (non-modal) mode
+        if (!$this->modal) {
+            $this->urlState = true;
+
+            // Restore folder from URL if not already set
+            if ($this->folderId === null) {
+                $urlFolderId = request()->query('folder');
+                if ($urlFolderId && Cabinet::folder($urlFolderId)) {
+                    $this->folderId = $urlFolderId;
+                    $this->initialFolderId = $urlFolderId;
+                }
+            }
+
+            // Restore bulk selection from URL
+            $urlSelected = request()->query('selected');
+            if ($urlSelected) {
+                $this->bulkSelectedFiles = $this->parseUrlSelection($urlSelected);
+            }
+        }
+    }
+
+    /**
+     * Serialize bulk selection array to a URL-safe string.
+     * Format: "source:id,source:id"
+     */
+    protected function serializeUrlSelection(): ?string
+    {
+        if (empty($this->bulkSelectedFiles)) {
+            return null;
+        }
+
+        return collect($this->bulkSelectedFiles)
+            ->map(fn (array $file) => "{$file['source']}:{$file['id']}")
+            ->join(',');
+    }
+
+    /**
+     * Parse a URL selection string back into file identifier arrays.
+     */
+    protected function parseUrlSelection(string $value): array
+    {
+        return collect(explode(',', $value))
+            ->map(function (string $pair) {
+                $parts = explode(':', $pair, 2);
+                if (count($parts) !== 2) {
+                    return null;
+                }
+
+                $file = Cabinet::file($parts[0], $parts[1]);
+                if ($file === null) {
+                    return null;
+                }
+
+                return $file->toIdentifier();
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Push current folder/selection state to the browser URL.
+     * Only dispatches in full-screen mode.
+     */
+    protected function syncUrlState(): void
+    {
+        if (!$this->urlState) {
+            return;
+        }
+
+        $this->dispatch('cabinet:url-state-changed', [
+            'folder' => $this->folderId,
+            'selected' => $this->serializeUrlSelection(),
+        ]);
+    }
+
+    public function loadMore(): void
+    {
+        if (!$this->lazyLoad) {
+            return;
+        }
+
+        $this->fileLimit += 100;
+        $this->refresh();
+    }
+
+    public function updatedSearchQuery(): void
+    {
+        if (!$this->lazyLoad) {
+            return;
+        }
+
+        $this->fileLimit = 100;
+        $this->refresh();
+    }
+
+    public function toggleBulkSelection(string $source, string $id): void
+    {
+        $identifier = ['source' => $source, 'id' => $id];
+        $key = "{$source}:{$id}";
+
+        $existingIndex = collect($this->bulkSelectedFiles)
+            ->search(fn (array $file) => "{$file['source']}:{$file['id']}" === $key);
+
+        if ($existingIndex !== false) {
+            $this->bulkSelectedFiles = collect($this->bulkSelectedFiles)
+                ->filter(fn (array $file) => "{$file['source']}:{$file['id']}" !== $key)
+                ->values()
+                ->all();
+        } else {
+            $file = Cabinet::file($source, $id);
+
+            if ($file !== null) {
+                $this->bulkSelectedFiles = [...$this->bulkSelectedFiles, $file->toIdentifier()];
+            }
+        }
+
+        $this->syncUrlState();
+    }
+
+    public function clearBulkSelection(): void
+    {
+        $this->bulkSelectedFiles = [];
+        $this->syncUrlState();
     }
 
     public function refresh()
@@ -321,6 +456,18 @@ class Finder extends Component implements HasForms, HasActions
         $this->closeFinder();
     }
 
+    public function toggleSort(string $column)
+    {
+        if ($this->sortColumn === $column) {
+            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->sortColumn = $column;
+            $this->sortDirection = 'asc';
+        }
+
+        $this->refresh();
+    }
+
     public function openFolder(string $id)
     {
         // only allow setting if the folder id is found in the current folder
@@ -331,9 +478,13 @@ class Finder extends Component implements HasForms, HasActions
         }
 
         $this->folderId = $id;
+        $this->bulkSelectedFiles = [];
+        $this->fileLimit = 100;
+        $this->searchQuery = '';
 
         $this->refresh();
         $this->dispatch('cabinet:folder-opened');
+        $this->syncUrlState();
     }
 
     public function moveFile(string $source, string $id, ?string $folderId)
@@ -424,12 +575,53 @@ class Finder extends Component implements HasForms, HasActions
     #[Computed]
     public function files(): Collection
     {
+        return $this->allFiles()->take($this->lazyLoad ? $this->fileLimit : null);
+    }
+
+    /**
+     * Total file count in the current folder (after search/sort, before limit).
+     */
+    #[Computed]
+    public function totalFileCount(): int
+    {
+        return $this->allFiles()->count();
+    }
+
+    /**
+     * All files in the current folder, filtered and sorted but not limited.
+     *
+     * @return Collection<File>
+     */
+    protected function allFiles(): Collection
+    {
         $files = $this->folder?->files() ?? collect();
 
-        return $files
-            ->sortBy(fn (File|Folder $fileOrFolder) =>
-                ($fileOrFolder instanceOf Folder ? 0 : 1) . Str::lower($fileOrFolder->name)
+        // Server-side search filter (lazy load mode only)
+        if ($this->lazyLoad && filled($this->searchQuery)) {
+            $query = Str::lower($this->searchQuery);
+            $files = $files->filter(fn ($fileOrFolder) =>
+                Str::contains(Str::lower($fileOrFolder->name), $query)
             );
+        }
+
+        return $files
+            ->sortBy(function ($fileOrFolder) {
+                $isFolder = $fileOrFolder instanceof Folder;
+                $folderPrefix = $isFolder ? 0 : 1;
+
+                if ($isFolder) {
+                    return $folderPrefix . Str::lower($fileOrFolder->name);
+                }
+
+                $value = match ($this->sortColumn) {
+                    'name' => Str::lower($fileOrFolder->name),
+                    'type' => Str::lower($fileOrFolder->type->name()),
+                    'created' => $fileOrFolder->createdAt?->getTimestamp() ?? 0,
+                    default => Str::lower($fileOrFolder->name),
+                };
+
+                return $folderPrefix . $value;
+            }, SORT_REGULAR, $this->sortDirection === 'desc');
     }
 
     #[Computed]
@@ -512,6 +704,36 @@ class Finder extends Component implements HasForms, HasActions
         return RefreshFile::make('refreshFile');
     }
 
+    public function deleteBulkAction(): Action
+    {
+        return DeleteBulk::make('deleteBulk');
+    }
+
+    public function downloadBulkAction(): Action
+    {
+        return DownloadBulk::make('downloadBulk');
+    }
+
+    public function deselectAllAction(): Action
+    {
+        return Action::make('deselectAll')
+            ->label(__('cabinet::actions.deselect-all'))
+            ->icon('heroicon-o-x-mark')
+            ->color('gray')
+            ->action(fn () => $this->clearBulkSelection());
+    }
+
+    public function deselectAction(): Action
+    {
+        return Action::make('deselect')
+            ->label(__('cabinet::actions.deselect'))
+            ->icon('heroicon-o-x-mark')
+            ->color('gray')
+            ->action(function (array $arguments) {
+                $this->toggleBulkSelection($arguments['source'], $arguments['id']);
+            });
+    }
+
     /**
      * Load file references for the detail panel.
      *
@@ -520,7 +742,7 @@ class Finder extends Component implements HasForms, HasActions
      * references by dispatching `cabinet:extra-references` with their data,
      * OR they can override this method by extending the Finder component.
      *
-     * @return array<array{label: string, url: string|null}>
+     * @return array<array{label: string, url: string|null, icon: string|null, typeLabel: string|null, thumbnailUrl: string|null}>
      */
     public function loadFileReferences(string $source, string $id): array
     {
@@ -530,27 +752,7 @@ class Finder extends Component implements HasForms, HasActions
             return [];
         }
 
-        $references = [];
-
-        // Resolve Cabinet's own file references (filerefs)
-        if (method_exists(Cabinet::class, 'resolveFileReferences') || method_exists(\Cabinet\Facades\Cabinet::getFacadeRoot(), 'resolveFileReferences')) {
-            try {
-                $resolved = \Cabinet\Facades\Cabinet::resolveFileReferences($file);
-
-                if ($resolved) {
-                    foreach ($resolved as $ref) {
-                        $references[] = [
-                            'label' => is_array($ref) ? ($ref['label'] ?? (string) $ref) : (string) $ref,
-                            'url'   => is_array($ref) ? ($ref['url'] ?? null) : null,
-                        ];
-                    }
-                }
-            } catch (\Throwable $e) {
-                // resolveFileReferences may not be implemented — silently ignore
-            }
-        }
-
-        return $references;
+        return \Cabinet\Facades\Cabinet::resolveFileReferences($file);
     }
 
     public function moveFileInSelection(int $from, int $to)
@@ -583,7 +785,7 @@ class Finder extends Component implements HasForms, HasActions
     #[Computed]
     public function contextMenus(): Collection
     {
-        return $this->files
+        $menus = $this->files
             ->unique('type')
             ->mapWithKeys(fn (File|Folder $file) => [
                 $file->type->slug() => match ($file->type::class) {
@@ -606,6 +808,22 @@ class Finder extends Component implements HasForms, HasActions
                     ->map(fn (Arrayable $item) => $item->toArray())
                     ->toArray()
             ]);
+
+        // Add bulk context menu when files are selected in browse mode
+        if (!$this->selectionMode && !empty($this->bulkSelectedFiles)) {
+            $menus['bulk'] = [
+                ContextMenuItem::fromAction($this->deselectAction)->toArray(),
+                [
+                    'label' => '',
+                    'seperator' => true,
+                ],
+                ContextMenuItem::fromAction($this->downloadBulkAction)->toArray(),
+                ContextMenuItem::fromAction($this->deleteBulkAction)->toArray(),
+                ContextMenuItem::fromAction($this->deselectAllAction)->toArray(),
+            ];
+        }
+
+        return $menus;
     }
 
     #[Computed]
@@ -627,28 +845,55 @@ class Finder extends Component implements HasForms, HasActions
     }
 
     /**
-     * This URL can be used to load images in a more performant way, if you're using
-     * S3 as your file backend. Normally signed URLs are used to load images, but
-     * these will not be cached by the browser properly.
-     *
-     * All you need to do is create your own 'cabinet.files.thumbnail' route and
-     * return the Image / URL (redirect to S3) from there. If you set Cache-Control
-     * headers on this route properly, the redirect will be cached by the browser.
+     * Map internal source names to public URL-friendly slugs.
+     * This keeps implementation details (like "spatie-media") out of URLs.
      */
-    #[Computed]
-    public function replaceableThumbnailUrl(): ?string
+    protected function publicSourceSlug(string $source): string
     {
-        // check if the 'api.media.v1.cabinet.thumbnail' route exists
-        // if it does, return the url
+        return match ($source) {
+            'spatie-media' => 'media',
+            default => $source,
+        };
+    }
 
-        if (app('router')->has('cabinet.files.thumbnail')) {
-            return route('cabinet.files.thumbnail', [
-                'source' => 'REPLACE_SOURCE',
-                'id' => 'REPLACE_ID',
-            ]);
+    /**
+     * Generate a stable signed thumbnail URL for a specific file.
+     * Returns null if the cabinet.files.thumbnail route is not registered.
+     *
+     * @param string $variant 'normal' or 'tiny'
+     */
+    public function stableThumbnailUrl(string $source, string $id, ?string $variant = null): ?string
+    {
+        if (!app('router')->has('cabinet.files.thumbnail')) {
+            return null;
         }
 
-        return null;
+        $url = route('cabinet.files.thumbnail', [
+            'source' => $this->publicSourceSlug($source),
+            'id' => $id,
+        ]);
+
+        if ($variant !== null) {
+            $url .= '?variant=' . $variant;
+        }
+
+        return \Cabinet\RollingSignature\Signature::url($url)->signedUrl();
+    }
+
+    /**
+     * Generate a stable signed original file URL for a specific file.
+     * Returns null if the cabinet.files.original route is not registered.
+     */
+    public function stableFileUrl(string $source, string $id): ?string
+    {
+        if (!app('router')->has('cabinet.files.original')) {
+            return null;
+        }
+
+        return \Cabinet\RollingSignature\Signature::route('cabinet.files.original', [
+            'source' => $this->publicSourceSlug($source),
+            'id' => $id,
+        ])->signedUrl();
     }
 
 	public function render()
@@ -674,6 +919,20 @@ class Finder extends Component implements HasForms, HasActions
             ? 'cabinet-filament::livewire.finder-modal'
             : 'cabinet-filament::livewire.finder-page';
 
+        $thumbnailUrls = [];
+        $fileUrls = [];
+
+        foreach ($this->files as $fileOrFolder) {
+            if ($fileOrFolder instanceof File) {
+                $key = $fileOrFolder->source . ':' . $fileOrFolder->id;
+                $thumbnailUrls[$key] = [
+                    'normal' => $this->stableThumbnailUrl($fileOrFolder->source, $fileOrFolder->id, 'normal'),
+                    'tiny' => $this->stableThumbnailUrl($fileOrFolder->source, $fileOrFolder->id, 'tiny'),
+                ];
+                $fileUrls[$key] = $this->stableFileUrl($fileOrFolder->source, $fileOrFolder->id);
+            }
+        }
+
         $data = [
             'folder' => $this->folder,
             'acceptedTypeChecker' => $this->acceptableTypeChecker,
@@ -684,10 +943,13 @@ class Finder extends Component implements HasForms, HasActions
             'selectionMode' => $this->selectionMode,
             'sidebarItems' => collect($this->sidebarItems),
             'selectedSidebarItem' => $this->selectedSidebarItem,
-            'replaceableThumbnailUrl' => $this->replaceableThumbnailUrl,
+            'thumbnailUrls' => $thumbnailUrls,
+            'fileUrls' => $fileUrls,
             'selectedFiles' => $this->selectedFiles,
             'treeSidebar' => $this->treeSidebar,
             'initialFolderId' => $this->initialFolderId,
+            'lazyLoad' => $this->lazyLoad,
+            'hasMoreFiles' => $this->lazyLoad && $this->totalFileCount > $this->fileLimit,
         ];
 
         return view($view, $data);

@@ -44,17 +44,13 @@
 
             openFinder() {
                 @unless ($isDisabled())
-                    try {
-                        this.$wire.dispatchTo('modals', 'modals:open', 'finder', {
-                            statePath: @js($statePath),
-                            selection: this.files,
-                            max: @js($max),
-                            acceptedTypes: @js($acceptedTypes),
-                            heading: @js($finderHeading),
-                        });
-                    } catch (e) {
-                        console.error(e);
-                    }
+                    this.$wire.dispatchTo('modals', 'modals:open', 'finder', {
+                        statePath: @js($statePath),
+                        selection: this.files,
+                        max: @js($max),
+                        acceptedTypes: @js($acceptedTypes),
+                        heading: @js($finderHeading),
+                    });
                 @endunless
             },
 
