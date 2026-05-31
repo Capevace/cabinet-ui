@@ -610,17 +610,18 @@ class Finder extends Component implements HasForms, HasActions
                 $folderPrefix = $isFolder ? 0 : 1;
 
                 if ($isFolder) {
-                    return $folderPrefix . Str::lower($fileOrFolder->name);
+                    return [$folderPrefix, Str::lower($fileOrFolder->name)];
                 }
 
                 $value = match ($this->sortColumn) {
                     'name' => Str::lower($fileOrFolder->name),
                     'type' => Str::lower($fileOrFolder->type->name()),
+                    'size' => $fileOrFolder->size,
                     'created' => $fileOrFolder->createdAt?->getTimestamp() ?? 0,
                     default => Str::lower($fileOrFolder->name),
                 };
 
-                return $folderPrefix . $value;
+                return [$folderPrefix, $value];
             }, SORT_REGULAR, $this->sortDirection === 'desc');
     }
 

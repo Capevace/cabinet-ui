@@ -6,7 +6,6 @@
         'ring-2 ring-primary-500 scale-105': draggingOverFolder === '{{ $folder->id }}',
     }"
     x-show="!searchQuery || @json(strtolower($folder->name)).includes(searchQuery.toLowerCase())"
-
     @dragover="draggingOverFolder = '{{ $folder->id }}'"
     @dragleave.self="draggingOverFolder = null"
     @drop.prevent="

@@ -42,10 +42,12 @@ class DownloadBulk extends Action
                     ->toString();
 
                 $jsExpressions[] = <<<JS
-                    browser.downloads.download({
-                        url: '{$url}',
-                        filename: '{$name}',
-                    });
+                    const a = document.createElement('a');
+                    a.href = '{$url}';
+                    a.download = '{$name}';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                 JS;
             }
 
