@@ -85,9 +85,7 @@ class Finder extends Component implements HasForms, HasActions
 
 	public ?SelectionMode $selectionMode = null;
 
-    public array $selectedFiles = [];
-
-    public array $bulkSelectedFiles = [];
+	public array $selectedFiles = [];
 
     #[Session]
     public bool $showSidebar = true;
@@ -274,7 +272,6 @@ class Finder extends Component implements HasForms, HasActions
 
 		$this->selectionMode = null;
         $this->selectedFiles = [];
-        $this->bulkSelectedFiles = [];
 
         $this->dispatch('cabinet:finder-closed');
     }
@@ -294,10 +291,10 @@ class Finder extends Component implements HasForms, HasActions
                 }
             }
 
-            // Restore bulk selection from URL
+            // Restore selection from URL
             $urlSelected = request()->query('selected');
             if ($urlSelected) {
-                $this->bulkSelectedFiles = $this->parseUrlSelection($urlSelected);
+                $this->selectedFiles = $this->parseUrlSelection($urlSelected);
             }
         }
     }
@@ -308,11 +305,11 @@ class Finder extends Component implements HasForms, HasActions
      */
     protected function serializeUrlSelection(): ?string
     {
-        if (empty($this->bulkSelectedFiles)) {
+        if (empty($this->selectedFiles)) {
             return null;
         }
 
-        return collect($this->bulkSelectedFiles)
+        return collect($this->selectedFiles)
             ->map(fn (array $file) => "{$file['source']}:{$file['id']}")
             ->join(',');
     }
@@ -377,33 +374,9 @@ class Finder extends Component implements HasForms, HasActions
         $this->refresh();
     }
 
-    public function toggleBulkSelection(string $source, string $id): void
+    public function clearSelection(): void
     {
-        $identifier = ['source' => $source, 'id' => $id];
-        $key = "{$source}:{$id}";
-
-        $existingIndex = collect($this->bulkSelectedFiles)
-            ->search(fn (array $file) => "{$file['source']}:{$file['id']}" === $key);
-
-        if ($existingIndex !== false) {
-            $this->bulkSelectedFiles = collect($this->bulkSelectedFiles)
-                ->filter(fn (array $file) => "{$file['source']}:{$file['id']}" !== $key)
-                ->values()
-                ->all();
-        } else {
-            $file = Cabinet::file($source, $id);
-
-            if ($file !== null) {
-                $this->bulkSelectedFiles = [...$this->bulkSelectedFiles, $file->toIdentifier()];
-            }
-        }
-
-        $this->syncUrlState();
-    }
-
-    public function clearBulkSelection(): void
-    {
-        $this->bulkSelectedFiles = [];
+        $this->selectedFiles = [];
         $this->syncUrlState();
     }
 
@@ -478,7 +451,12 @@ class Finder extends Component implements HasForms, HasActions
         }
 
         $this->folderId = $id;
-        $this->bulkSelectedFiles = [];
+
+        // Keep selection across folders in selection mode; reset in browse mode
+        if ($this->selectionMode === null) {
+            $this->selectedFiles = [];
+        }
+
         $this->fileLimit = 100;
         $this->searchQuery = '';
 
@@ -721,7 +699,7 @@ class Finder extends Component implements HasForms, HasActions
             ->label(__('cabinet::actions.deselect-all'))
             ->icon('heroicon-o-x-mark')
             ->color('gray')
-            ->action(fn () => $this->clearBulkSelection());
+            ->action(fn () => $this->clearSelection());
     }
 
     public function deselectAction(): Action
@@ -731,7 +709,8 @@ class Finder extends Component implements HasForms, HasActions
             ->icon('heroicon-o-x-mark')
             ->color('gray')
             ->action(function (array $arguments) {
-                $this->toggleBulkSelection($arguments['source'], $arguments['id']);
+                $this->deselectFile($arguments['source'], $arguments['id']);
+                $this->syncUrlState();
             });
     }
 
@@ -811,7 +790,7 @@ class Finder extends Component implements HasForms, HasActions
             ]);
 
         // Add bulk context menu when files are selected in browse mode
-        if (!$this->selectionMode && !empty($this->bulkSelectedFiles)) {
+        if (!$this->selectionMode && !empty($this->selectedFiles)) {
             $menus['bulk'] = [
                 ContextMenuItem::fromAction($this->deselectAction)->toArray(),
                 [
@@ -897,6 +876,22 @@ class Finder extends Component implements HasForms, HasActions
         ])->signedUrl();
     }
 
+    /**
+     * Generate a stable signed inline preview URL for a specific file.
+     * Returns null if the cabinet.files.preview route is not registered.
+     */
+    public function stablePreviewUrl(string $source, string $id): ?string
+    {
+        if (!app('router')->has('cabinet.files.preview')) {
+            return null;
+        }
+
+        return \Cabinet\RollingSignature\Signature::route('cabinet.files.preview', [
+            'source' => $this->publicSourceSlug($source),
+            'id' => $id,
+        ])->signedUrl();
+    }
+
 	public function render()
     {
         // Auto-populate sidebar with root-level directories when enabled
@@ -922,6 +917,7 @@ class Finder extends Component implements HasForms, HasActions
 
         $thumbnailUrls = [];
         $fileUrls = [];
+        $previewUrls = [];
 
         foreach ($this->files as $fileOrFolder) {
             if ($fileOrFolder instanceof File) {
@@ -931,6 +927,7 @@ class Finder extends Component implements HasForms, HasActions
                     'tiny' => $this->stableThumbnailUrl($fileOrFolder->source, $fileOrFolder->id, 'tiny'),
                 ];
                 $fileUrls[$key] = $this->stableFileUrl($fileOrFolder->source, $fileOrFolder->id);
+                $previewUrls[$key] = $this->stablePreviewUrl($fileOrFolder->source, $fileOrFolder->id);
             }
         }
 
@@ -946,6 +943,7 @@ class Finder extends Component implements HasForms, HasActions
             'selectedSidebarItem' => $this->selectedSidebarItem,
             'thumbnailUrls' => $thumbnailUrls,
             'fileUrls' => $fileUrls,
+            'previewUrls' => $previewUrls,
             'selectedFiles' => $this->selectedFiles,
             'treeSidebar' => $this->treeSidebar,
             'initialFolderId' => $this->initialFolderId,

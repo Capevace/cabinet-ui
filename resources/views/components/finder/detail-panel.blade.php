@@ -2,11 +2,12 @@
     'files' => [],
     'thumbnailUrls' => [],
     'fileUrls' => [],
+    'previewUrls' => [],
 ])
 
 {{--
-    Detail panel — slides in from the right when a file is clicked in browse mode.
-    `detailFile` Alpine variable (on the parent article) drives this panel.
+    Detail panel — slides in from the right when a file is selected in browse mode.
+    `selectedFiles` Alpine variable (on the parent article) drives this panel.
 
     We build a JS-accessible fileMap from all files in the current folder so metadata
     is available without a Livewire round-trip.
@@ -28,14 +29,14 @@
                 'previewUrl' => $f->previewUrl,
                 'path'       => method_exists($f, 'path') ? $f->path() : null,
                 'mimeType'   => method_exists($f, 'formattedMimeType') ? $f->formattedMimeType() : null,
-                'createdAt'  => $f->createdAt ? $f->createdAt->format('M j, Y') : null,
+                'createdAt'  => $f->createdAt ? $f->createdAt->translatedFormat(config('cabinet.date_format', 'd. F Y')) : null,
             ]
         ]);
 @endphp
 
 <aside
     {{ $attributes }}
-    x-show="(detailFile !== null && currentFile !== null) || bulkSelectedFiles.length > 0"
+    x-show="selectedFiles.length > 0"
     x-transition:enter="transition ease-out duration-200"
     x-transition:enter-start="opacity-0 translate-x-4"
     x-transition:enter-end="opacity-100 translate-x-0"
@@ -44,14 +45,16 @@
     x-transition:leave-end="opacity-0 translate-x-4"
     class="w-72 flex-shrink-0 border-l-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col overflow-y-auto"
     x-cloak
-    @cabinet:folder-opened.window="detailFile = null"
-    @cabinet:finder-closed.window="detailFile = null"
     x-data="{
         fileMap: @js($fileMap),
 
         get currentFile() {
-            if (!detailFile) return null;
-            return this.fileMap[detailFile.source + ':' + detailFile.id] ?? null;
+            if (selectedFiles.length === 0) return null;
+            return this.fileMap[selectedFiles[0].source + ':' + selectedFiles[0].id] ?? null;
+        },
+
+        get isMultiSelect() {
+            return selectedFiles.length > 1;
         },
 
         mountAction(name, args = {}) {
@@ -60,6 +63,7 @@
 
         thumbnailUrls: @js($thumbnailUrls),
         fileUrls: @js($fileUrls),
+        previewUrls: @js($previewUrls),
 
         makeThumbnailUrl(file) {
             return this.thumbnailUrls[file.source + ':' + file.id]?.normal ?? null;
@@ -73,6 +77,10 @@
             return this.fileUrls[file.source + ':' + file.id] ?? null;
         },
 
+        makePreviewUrl(file) {
+            return this.previewUrls[file.source + ':' + file.id] ?? null;
+        },
+
         getBulkFile(fileId) {
             const parts = fileId.split(':');
             return this.fileMap[parts[0] + ':' + parts[1]] ?? null;
@@ -80,14 +88,14 @@
     }"
 >
     {{-- SINGLE FILE MODE --}}
-    <template x-if="bulkSelectedFiles.length === 0">
+    <template x-if="!isMultiSelect">
         <div class="flex flex-col flex-1 min-h-0">
             {{-- Panel header --}}
             <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 flex-shrink-0">
                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate min-w-0" x-text="currentFile?.name ?? ''">&nbsp;</h3>
                 <button
                     type="button"
-                    @click="detailFile = null"
+                    @click="selectedFiles = []"
                     class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0 ml-2"
                     title="{{ __('cabinet::actions.close-details') }}"
                 >
@@ -102,7 +110,7 @@
                     <div
                         class="bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0 relative group cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                         style="min-height: 160px; max-height: 220px;"
-                        @click="mountAction('previewFile', detailFile)"
+                        @click="mountAction('previewFile', selectedFiles[0])"
                         title="{{ __('cabinet::actions.preview') }}"
                     >
                         {{-- Click overlay for video/iframe elements that capture pointer events --}}
@@ -161,7 +169,7 @@
                     <div class="flex items-center justify-center gap-0.5 px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 flex-shrink-0">
                         <button
                             type="button"
-                            @click="mountAction('previewFile', detailFile)"
+                            @click="mountAction('previewFile', selectedFiles[0])"
                             class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                             title="{{ __('cabinet::actions.preview') }}"
                         >
@@ -169,7 +177,7 @@
                         </button>
                         <button
                             type="button"
-                            @click="mountAction('downloadFile', detailFile)"
+                            @click="mountAction('downloadFile', selectedFiles[0])"
                             class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                             title="{{ __('cabinet::actions.download') }}"
                         >
@@ -177,7 +185,7 @@
                         </button>
                         <button
                             type="button"
-                            @click="mountAction('shareFile', detailFile)"
+                            @click="mountAction('shareFile', selectedFiles[0])"
                             class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                             title="{{ __('cabinet::actions.share') }}"
                         >
@@ -185,7 +193,7 @@
                         </button>
                         <button
                             type="button"
-                            @click="mountAction('rename', detailFile)"
+                            @click="mountAction('rename', selectedFiles[0])"
                             class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                             title="{{ __('cabinet::actions.rename') }}"
                         >
@@ -193,7 +201,7 @@
                         </button>
                         <button
                             type="button"
-                            @click="mountAction('refreshFile', detailFile)"
+                            @click="mountAction('refreshFile', selectedFiles[0])"
                             class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                             title="{{ __('cabinet::actions.refresh-file') }}"
                         >
@@ -202,7 +210,7 @@
                         <div class="flex-1"></div>
                         <button
                             type="button"
-                            @click="mountAction('delete', detailFile)"
+                            @click="mountAction('delete', selectedFiles[0])"
                             class="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-gray-400 hover:text-red-600 dark:hover:text-red-400"
                             title="{{ __('cabinet::actions.delete') }}"
                         >
@@ -257,16 +265,16 @@
     </template>
 
     {{-- BULK SELECTION MODE --}}
-    <template x-if="bulkSelectedFiles.length > 0">
+    <template x-if="isMultiSelect">
         <div class="flex flex-col flex-1 min-h-0">
             {{-- Panel header --}}
             <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 flex-shrink-0">
                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                    <span x-text="bulkSelectedFiles.length"></span> {{ __('cabinet::messages.selected') }}
+                    <span x-text="selectedFiles.length"></span> {{ __('cabinet::messages.selected') }}
                 </h3>
                 <button
                     type="button"
-                    @click="bulkSelectedFiles = []; detailFile = null;"
+                    @click="selectedFiles = []"
                     class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0 ml-2"
                     title="{{ __('cabinet::actions.deselect-all') }}"
                 >
@@ -278,7 +286,7 @@
             <div class="flex items-center justify-center gap-0.5 px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 flex-shrink-0">
                 <button
                     type="button"
-                    @click="mountAction('downloadBulk', { files: bulkSelectedFiles })"
+                    @click="mountAction('downloadBulk', { files: selectedFiles })"
                     class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                     title="{{ __('cabinet::actions.download-bulk') }}"
                 >
@@ -287,7 +295,7 @@
                 <div class="flex-1"></div>
                 <button
                     type="button"
-                    @click="mountAction('deleteBulk', { files: bulkSelectedFiles })"
+                    @click="mountAction('deleteBulk', { files: selectedFiles })"
                     class="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-gray-400 hover:text-red-600 dark:hover:text-red-400"
                     title="{{ __('cabinet::actions.delete-bulk') }}"
                 >
@@ -297,7 +305,7 @@
 
             {{-- Selected files list --}}
             <div class="flex-1 overflow-y-auto">
-                <template x-for="selectedFile in bulkSelectedFiles" :key="selectedFile.source + ':' + selectedFile.id">
+                <template x-for="selectedFile in selectedFiles" :key="selectedFile.source + ':' + selectedFile.id">
                     <div class="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                         <div class="w-8 h-8 rounded overflow-hidden flex items-center justify-center bg-gray-200 dark:bg-gray-700 flex-shrink-0">
                         <template x-if="getBulkFile(selectedFile.source + ':' + selectedFile.id)?.previewUrl && ['image', 'video', 'pdf'].includes(getBulkFile(selectedFile.source + ':' + selectedFile.id)?.typeSlug)">
@@ -316,7 +324,7 @@
                         <p class="text-xs text-gray-700 dark:text-gray-300 truncate flex-1" x-text="selectedFile.name"></p>
                         <button
                             type="button"
-                            @click="toggleBulkSelection(selectedFile)"
+                            @click="toggleFileSelection(selectedFile)"
                             class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
                             title="{{ __('cabinet::actions.deselect') }}"
                         >

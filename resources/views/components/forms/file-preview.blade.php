@@ -3,11 +3,20 @@
 $file = $getFile();
 ?>
 
+<div class="flex flex-col flex-1 h-full">
+    <style>
+        /* Remove the padding inside the Filament action model */
+        .fi-modal-content {
+            padding: 0 !important;
+        }
+    </style>
+
 @switch($file->type->slug())
     @case('image')
         <img
             src="{{ $file->url() }}"
             alt=""
+            class="w-full h-full object-contain"
         />
         @break
 
@@ -15,14 +24,22 @@ $file = $getFile();
         <video
             src="{{ $file->url() }}"
             controls
+            class="w-full h-full object-contain"
         ></video>
         @break
     @case('pdf')
-        <iframe
-            src="{{ $file->url() }}"
-            class="w-full h-full border-none"
-            style="min-height: 70vh;"
-        ></iframe>
+        @if($getPreviewUrl())
+            <iframe
+                src="{{ $getPreviewUrl() }}"
+                class="w-full flex-1 border-none"
+                style="min-height: 70vh;"
+            ></iframe>
+        @else
+            <div class="flex flex-col space-y-5 items-center justify-center w-full h-full">
+                <x-heroicon-o-document class="w-16 h-16 text-gray-400 dark:text-gray-600" />
+                <p>{{ __('cabinet::messages.no-preview-available') }}</p>
+            </div>
+        @endif
         @break
 
     @case('indoor-scan')
@@ -88,3 +105,5 @@ $file = $getFile();
 @endswitch
 
 
+
+</div>

@@ -8,9 +8,8 @@
     {{ $attributes->class(['group border-b border-gray-200 dark:border-gray-800 last:border-0 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors cursor-pointer']) }}
     :class="{
         'opacity-60 cursor-not-allowed': selectionEnabled && (!canSelectMore && !isFileSelected(@js($file->toIdentifier())) || {{ $disabled ? 'true' : 'false' }}),
-        'bg-primary-50 dark:bg-primary-950/30': isFileSelected(@js($file->toIdentifier())),
-        'bg-gray-100 dark:bg-gray-900': !selectionEnabled && isDetailFile(@js($file->toIdentifier())),
-        'bg-secondary-50 dark:bg-secondary-950/20': !selectionEnabled && isBulkSelected(@js($file->toIdentifier())),
+        'bg-primary-50 dark:bg-primary-950/30': selectionEnabled && isFileSelected(@js($file->toIdentifier())),
+        'bg-secondary-50 dark:bg-secondary-950/20': !selectionEnabled && isFileSelected(@js($file->toIdentifier())),
     }"
     draggable="true"
     x-on:dragstart="
@@ -29,7 +28,7 @@
             handleFileClick(@js($file->toIdentifier()), $event);
         }
     "
-    @contextmenu="openContextMenu('{{ $file->type->slug() }}', $event, @js($file->toIdentifier()))"
+    @contextmenu="openContextMenu(!selectionEnabled && isFileSelected(@js($file->toIdentifier())) && selectedFiles.length > 1 ? 'bulk' : '{{ $file->type->slug() }}', $event, @js($file->toIdentifier()))"
 >
     {{-- Type icon / thumbnail --}}
     <td class="py-1.5 px-2 w-8">
@@ -54,21 +53,21 @@
             <span
                 class="font-medium text-sm truncate max-w-xs text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
                 :class="{
-                    'text-primary-600 dark:text-primary-400': isFileSelected(@js($file->toIdentifier())),
+                    'text-primary-600 dark:text-primary-400': selectionEnabled && isFileSelected(@js($file->toIdentifier())),
                 }"
             >
                 {{ $file->name }}
             </span>
             {{-- Selection checkmark --}}
             <span
-                x-show="isFileSelected(@js($file->toIdentifier()))"
+                x-show="selectionEnabled && isFileSelected(@js($file->toIdentifier()))"
                 class="flex-shrink-0"
             >
                 @svg('heroicon-s-check-circle', 'w-4 h-4 text-primary-500')
             </span>
-            {{-- Bulk selection checkmark --}}
+            {{-- Browse mode selection checkmark --}}
             <span
-                x-show="!selectionEnabled && isBulkSelected(@js($file->toIdentifier()))"
+                x-show="!selectionEnabled && isFileSelected(@js($file->toIdentifier()))"
                 class="flex-shrink-0"
                 x-cloak
             >
@@ -103,7 +102,7 @@
         <button
             type="button"
             class="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-            @click.stop="openContextMenu(!selectionEnabled && isBulkSelected(@js($file->toIdentifier())) && bulkSelectedFiles.length > 1 ? 'bulk' : '{{ $file->type->slug() }}', $event, @js($file->toIdentifier()))"
+            @click.stop="openContextMenu(!selectionEnabled && isFileSelected(@js($file->toIdentifier())) && selectedFiles.length > 1 ? 'bulk' : '{{ $file->type->slug() }}', $event, @js($file->toIdentifier()))"
             title="More actions"
         >
             @svg('heroicon-o-ellipsis-horizontal', 'w-4 h-4 text-gray-500')

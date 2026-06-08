@@ -12,6 +12,8 @@ class FilePreview extends Component
 
     protected File $file;
 
+    protected ?string $previewUrl = null;
+
     public static function make(File $file)
     {
         $static = app(static::class);
@@ -29,6 +31,13 @@ class FilePreview extends Component
         return $this;
     }
 
+    public function previewUrl(?string $url): static
+    {
+        $this->previewUrl = $url;
+
+        return $this;
+    }
+
     public function getImageSrc(): ?string
     {
         return $this->getState();
@@ -37,5 +46,10 @@ class FilePreview extends Component
     public function getFile(): File
     {
         return $this->file;
+    }
+
+    public function getPreviewUrl(): ?string
+    {
+        return $this->previewUrl;
     }
 }

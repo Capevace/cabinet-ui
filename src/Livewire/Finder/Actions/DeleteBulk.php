@@ -41,7 +41,7 @@ class DeleteBulk extends Action
                 $deleted++;
             }
 
-            $livewire->clearBulkSelection();
+            $livewire->clearSelection();
             $livewire->refresh();
         });
     }

@@ -6,6 +6,7 @@ use Filament\Schemas\Schema;
 use Exception;
 use Cabinet\Cabinet;
 use Cabinet\Filament\Components\FilePreview;
+use Cabinet\Filament\Livewire\Finder;
 use Cabinet\Filament\Livewire\Finder\Actions\Concerns\ValidatesFileAttributes;
 use Cabinet\Folder;
 use Closure;
@@ -13,6 +14,7 @@ use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Support\HtmlString;
+use Livewire\Component;
 
 class PreviewFile extends \Filament\Actions\Action
 {
@@ -30,6 +32,7 @@ class PreviewFile extends \Filament\Actions\Action
         $this->label(__('cabinet::actions.preview'));
         $this->iconButton();
         $this->icon('heroicon-o-eye');
+        $this->modalFooterActions([]);
 
         $this->modalAlignment('center');
 
@@ -41,7 +44,7 @@ class PreviewFile extends \Filament\Actions\Action
 //            ]);
         });
 
-        $this->schema(function (array $arguments, Cabinet $cabinet, PreviewFile $action) {
+        $this->schema(function (array $arguments, Cabinet $cabinet, PreviewFile $action, Component $livewire) {
             $action->verifyFileArguments($arguments);
 
             if ($arguments['type'] === (new \Cabinet\Types\Folder)->slug()) {
@@ -52,8 +55,13 @@ class PreviewFile extends \Filament\Actions\Action
 
             abort_if($file === null, 404);
 
+            $previewUrl = $livewire instanceof Finder
+                ? $livewire->stablePreviewUrl($arguments['source'], $arguments['id'])
+                : null;
+
             return [
                 FilePreview::make($file)
+                    ->previewUrl($previewUrl)
             ];
         });
 

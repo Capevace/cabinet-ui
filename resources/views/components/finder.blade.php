@@ -15,6 +15,7 @@
     'rounded' => true,
     'thumbnailUrls' => [],
     'fileUrls' => [],
+    'previewUrls' => [],
     'lazyLoad' => false,
     'hasMoreFiles' => false,
 ])
@@ -43,12 +44,6 @@
 
         // Search state (browse mode only)
         searchQuery: '',
-
-        // Bulk selection state (browse mode only)
-        bulkSelectedFiles: @entangle('bulkSelectedFiles').live,
-
-        // Detail panel state (browse mode only)
-        detailFile: null,
 
         init() {
             this.previousBodyOverflow = document.body.style.overflow;
@@ -80,11 +75,7 @@
         },
 
         toggleFileSelection(file) {
-        	const isSelected = this.isFileSelected(file);
-
-            if (!this.canSelectMore && !isSelected) {
-                return;
-            }
+            const isSelected = this.isFileSelected(file);
 
             if (isSelected) {
                 this.selectedFiles = this.selectedFiles.filter(f => f.id !== file.id || f.source !== file.source);
@@ -93,34 +84,26 @@
             }
         },
 
-        toggleBulkSelection(file) {
-            const key = `${file.source}:${file.id}`;
-            const index = this.bulkSelectedFiles.findIndex(f => `${f.source}:${f.id}` === key);
-
-            if (index !== -1) {
-                this.bulkSelectedFiles = this.bulkSelectedFiles.filter((_, i) => i !== index);
-            } else {
-                this.bulkSelectedFiles = [...this.bulkSelectedFiles, file];
-            }
-        },
-
         handleFileClick(file, event) {
             if (this.selectionEnabled) {
-                this.toggleFileSelection(file);
-            } else if (event.metaKey || event.ctrlKey) {
-                // Meta+click toggles bulk selection
-                this.toggleBulkSelection(file);
-                this.detailFile = null;
-            } else if (this.bulkSelectedFiles.length > 0) {
-                // If bulk selection active and normal click, clear bulk and show detail
-                this.bulkSelectedFiles = [];
-                this.detailFile = file;
-            } else {
-                // Browse mode: open detail panel
-                if (this.detailFile && this.detailFile.id === file.id && this.detailFile.source === file.source) {
-                    this.detailFile = null; // clicking same file closes the panel
+                // Selection mode: max === 1 → single-select, max > 1 or null → multi-select
+                if (this.max === 1) {
+                    this.selectedFiles = this.isFileSelected(file) ? [] : [file];
                 } else {
-                    this.detailFile = file;
+                    if (!this.canSelectMore && !this.isFileSelected(file)) {
+                        return;
+                    }
+                    this.toggleFileSelection(file);
+                }
+            } else if (event.metaKey || event.ctrlKey) {
+                // Browse mode + CMD → multi-select (no max limit)
+                this.toggleFileSelection(file);
+            } else {
+                // Browse mode + normal click → single select, toggle if same file
+                if (this.selectedFiles.length === 1 && this.isFileSelected(file)) {
+                    this.selectedFiles = [];
+                } else {
+                    this.selectedFiles = [file];
                 }
             }
         },
@@ -129,20 +112,12 @@
             return this.selectedFiles.some(f => f.id === file.id && f.source === file.source);
         },
 
-        isBulkSelected(file) {
-            return this.bulkSelectedFiles.some(f => f.id === file.id && f.source === file.source);
-        },
-
-        isDetailFile(file) {
-            return this.detailFile && this.detailFile.id === file.id && this.detailFile.source === file.source;
-        },
-
         confirmFileSelection() {
             this.$wire.confirmFileSelection(this.selectedFiles);
         },
 
         get canSelectMore() {
-            return this.selectionEnabled && (this.max === null || this.selectedFiles.length < this.max);
+            return this.max === null || this.selectedFiles.length < this.max;
         },
 
 
@@ -605,6 +580,7 @@
                         :$files
                         :thumbnail-urls="$thumbnailUrls"
                         :file-urls="$fileUrls"
+                        :preview-urls="$previewUrls"
                         wire:key="detail-panel-{{ $folder?->id }}"
                     />
                 @endif

@@ -29,7 +29,7 @@
         loading: false,
 
         loadReferences() {
-            if (!detailFile) {
+            if (selectedFiles.length !== 1 || !selectedFiles[0]) {
                 this.references = null;
                 return;
             }
@@ -37,14 +37,27 @@
             this.loading = true;
             this.references = null;
 
-            $wire.loadFileReferences(detailFile.source, detailFile.id)
+            const promise = $wire.loadFileReferences(selectedFiles[0].source, selectedFiles[0].id);
+
+            if (!promise || typeof promise.then !== 'function') {
+                this.loading = false;
+                this.references = [];
+                return;
+            }
+
+            promise
                 .then((refs) => {
                     this.references = refs ?? [];
+                })
+                .catch(() => {
+                    this.references = [];
+                })
+                .finally(() => {
                     this.loading = false;
                 });
         }
     }"
-    x-init="$watch('detailFile', () => loadReferences())"
+    x-init="$watch('selectedFiles', () => loadReferences())"
 >
     <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
         {{ __('cabinet::messages.file-references') }}

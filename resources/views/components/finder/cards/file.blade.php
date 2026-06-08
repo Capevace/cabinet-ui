@@ -8,9 +8,8 @@
     {{ $attributes->class(['flex flex-col group border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors rounded-md overflow-hidden']) }}
     :class="{
         'opacity-60 cursor-not-allowed': selectionEnabled && (!canSelectMore && !isFileSelected(@js($file->toIdentifier())) || {{ $disabled ? 'true' : 'false' }}),
-        'ring-2 ring-primary-500': isFileSelected(@js($file->toIdentifier())),
-        'ring-2 ring-gray-400 dark:ring-gray-500': !selectionEnabled && isDetailFile(@js($file->toIdentifier())),
-        'ring-2 ring-secondary-500': !selectionEnabled && isBulkSelected(@js($file->toIdentifier())),
+        'ring-2 ring-primary-500': selectionEnabled && isFileSelected(@js($file->toIdentifier())),
+        'ring-2 ring-secondary-500': !selectionEnabled && isFileSelected(@js($file->toIdentifier())),
         'opacity-50': draggingVirtualFile,
     }"
     x-on:dragend="
@@ -65,7 +64,7 @@
                 handleFileClick(@js($file->toIdentifier()), $event);
             }
         "
-        @contextmenu="openContextMenu(!selectionEnabled && isBulkSelected(@js($file->toIdentifier())) && bulkSelectedFiles.length > 1 ? 'bulk' : '{{ $file->type->slug() }}', $event, @js($file->toIdentifier()))"
+        @contextmenu="openContextMenu(!selectionEnabled && isFileSelected(@js($file->toIdentifier())) && selectedFiles.length > 1 ? 'bulk' : '{{ $file->type->slug() }}', $event, @js($file->toIdentifier()))"
     >
         <figure
 			class="h-32 w-full flex items-center justify-center bg-gray-200 dark:bg-gray-800"
@@ -162,9 +161,9 @@
             @endif
         </figure>
 
-        {{-- Bulk selection checkmark --}}
+        {{-- Browse mode selection checkmark --}}
         <div
-            x-show="!selectionEnabled && isBulkSelected(@js($file->toIdentifier()))"
+            x-show="!selectionEnabled && isFileSelected(@js($file->toIdentifier()))"
             class="absolute top-2 right-2 bg-secondary-500 text-white rounded-full p-1 shadow-sm"
             x-cloak
         >
