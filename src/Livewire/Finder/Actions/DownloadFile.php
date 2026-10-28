@@ -4,6 +4,7 @@ namespace Cabinet\Filament\Livewire\Finder\Actions;
 
 use Filament\Actions\Action;
 use Cabinet\Cabinet;
+use Cabinet\Filament\Livewire\Finder\Actions\Concerns\BuildsDownloadExpression;
 use Cabinet\Filament\Livewire\Finder\Actions\Concerns\ValidatesFileAttributes;
 use Cabinet\Folder;
 use Carbon\Carbon;
@@ -15,6 +16,7 @@ use Livewire\Component;
 
 class DownloadFile extends Action
 {
+    use BuildsDownloadExpression;
     use ValidatesFileAttributes;
 
     public static function getDefaultName(): ?string
@@ -44,24 +46,15 @@ class DownloadFile extends Action
             abort_if($file === null, 404);
 
             $ext = str($file->path())->afterLast('.')->toString();
-            $url = \Cabinet\Facades\Cabinet::generateDownloadUrl($file);
 
-            $name = str($file->name)
-                ->replace('\'', '')
-                ->append(".{$ext}")
-                ->slug()
-                ->toString();
-
-            $livewire->js(expression: (<<<JS
-                {
-                    const a = document.createElement('a');
-                    a.href = '{$url}';
-                    a.download = '{$name}';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                }
-            JS));
+            $livewire->js(expression: $this->downloadExpression([[
+                'url' => \Cabinet\Facades\Cabinet::generateDownloadUrl($file),
+                'name' => str($file->name)
+                    ->replace('\'', '')
+                    ->append(".{$ext}")
+                    ->slug()
+                    ->toString(),
+            ]]));
         });
     }
 }

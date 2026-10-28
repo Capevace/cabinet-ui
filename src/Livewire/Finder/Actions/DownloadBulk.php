@@ -5,9 +5,12 @@ namespace Cabinet\Filament\Livewire\Finder\Actions;
 use Filament\Actions\Action;
 use Cabinet\Facades\Cabinet;
 use Cabinet\Filament\Livewire\Finder;
+use Cabinet\Filament\Livewire\Finder\Actions\Concerns\BuildsDownloadExpression;
 
 class DownloadBulk extends Action
 {
+    use BuildsDownloadExpression;
+
     public static function getDefaultName(): ?string
     {
         return 'download-bulk';
@@ -21,10 +24,9 @@ class DownloadBulk extends Action
         $this->icon('heroicon-o-arrow-down-tray');
 
         $this->action(function (array $arguments, Finder $livewire) {
-            $files = $livewire->bulkActionFiles($arguments);
-            $jsExpressions = [];
+            $downloads = [];
 
-            foreach ($files as $identifier) {
+            foreach ($livewire->bulkActionFiles($arguments) as $identifier) {
                 $file = Cabinet::file($identifier['source'], $identifier['id']);
 
                 if ($file === null) {
@@ -32,28 +34,19 @@ class DownloadBulk extends Action
                 }
 
                 $ext = str($file->path())->afterLast('.')->toString();
-                $url = Cabinet::generateDownloadUrl($file);
 
-                $name = str($file->name)
-                    ->replace('\'', '')
-                    ->append(".{$ext}")
-                    ->slug()
-                    ->toString();
-
-                $jsExpressions[] = <<<JS
-                    {
-                        const a = document.createElement('a');
-                        a.href = '{$url}';
-                        a.download = '{$name}';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                    }
-                JS;
+                $downloads[] = [
+                    'url' => Cabinet::generateDownloadUrl($file),
+                    'name' => str($file->name)
+                        ->replace('\'', '')
+                        ->append(".{$ext}")
+                        ->slug()
+                        ->toString(),
+                ];
             }
 
-            if (!empty($jsExpressions)) {
-                $livewire->js(expression: implode("\n", $jsExpressions));
+            if ($downloads !== []) {
+                $livewire->js(expression: $this->downloadExpression($downloads));
             }
         });
     }
