@@ -23,12 +23,15 @@ class DeleteBulk extends Action
 
         $this->requiresConfirmation();
 
-        $this->modalHeading(fn (array $arguments) => trans_choice('cabinet::actions.delete-x-files', count($arguments['files'] ?? []), ['value' => count($arguments['files'] ?? [])]));
+        $this->modalHeading(function (array $arguments, Finder $livewire): string {
+            $count = count($livewire->bulkActionFiles($arguments));
+
+            return trans_choice('cabinet::actions.delete-x-files', $count, ['value' => $count]);
+        });
         $this->modalDescription(__('cabinet::actions.delete'));
 
         $this->action(function (array $arguments, Finder $livewire) {
-            $files = $arguments['files'] ?? [];
-            $deleted = 0;
+            $files = $livewire->bulkActionFiles($arguments);
 
             foreach ($files as $identifier) {
                 $file = Cabinet::file($identifier['source'], $identifier['id']);
@@ -38,7 +41,6 @@ class DeleteBulk extends Action
                 }
 
                 Cabinet::delete($file);
-                $deleted++;
             }
 
             $livewire->clearSelection();

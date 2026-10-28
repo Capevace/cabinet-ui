@@ -5,12 +5,13 @@
 @endphp
 
 <tr
-    {{ $attributes->class(['group border-b border-gray-200 dark:border-gray-800 last:border-0 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors cursor-pointer']) }}
+    {{ $attributes->class(['group h-10 border-b border-gray-200 dark:border-gray-800 last:border-0 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors cursor-pointer']) }}
     :class="{
         'opacity-60 cursor-not-allowed': selectionEnabled && (!canSelectMore && !isFileSelected(@js($file->toIdentifier())) || {{ $disabled ? 'true' : 'false' }}),
         'bg-primary-50 dark:bg-primary-950/30': selectionEnabled && isFileSelected(@js($file->toIdentifier())),
         'bg-secondary-50 dark:bg-secondary-950/20': !selectionEnabled && isFileSelected(@js($file->toIdentifier())),
     }"
+    data-file-select="{{ json_encode($file->toIdentifier()) }}"
     draggable="true"
     x-on:dragstart="
         draggingVirtualFile = true;
@@ -23,6 +24,7 @@
         draggingVirtualFile = false;
         draggingFiles = 0;
     "
+    @mousedown="handleFilePress(@js($file->toIdentifier()), $event)"
     @click="
         if (!(selectionEnabled && (!canSelectMore && !isFileSelected(@js($file->toIdentifier())) || {{ $disabled ? 'true' : 'false' }}))) {
             handleFileClick(@js($file->toIdentifier()), $event);
@@ -31,7 +33,7 @@
     @contextmenu="openContextMenu(!selectionEnabled && isFileSelected(@js($file->toIdentifier())) && selectedFiles.length > 1 ? 'bulk' : '{{ $file->type->slug() }}', $event, @js($file->toIdentifier()))"
 >
     {{-- Type icon / thumbnail --}}
-    <td class="py-1.5 px-2 w-8">
+    <td class="py-1.5 px-2 w-8 whitespace-nowrap">
         <div class="w-7 h-7 rounded overflow-hidden flex items-center justify-center bg-gray-200 dark:bg-gray-700 flex-shrink-0">
             @if(filled($thumbnailUrl) && in_array($file->type->slug(), ['image', 'video', 'pdf']))
                 <img
@@ -48,8 +50,8 @@
     </td>
 
     {{-- Name --}}
-    <td class="py-1.5 px-2">
-        <div class="flex items-center gap-2">
+    <td class="py-1.5 px-2 whitespace-nowrap">
+        <div class="flex items-center gap-2 min-w-0">
             <span
                 class="font-medium text-sm truncate max-w-xs text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
                 :class="{
@@ -77,12 +79,12 @@
     </td>
 
     {{-- Type --}}
-    <td class="py-1.5 px-2 hidden sm:table-cell">
+    <td class="py-1.5 px-2 hidden sm:table-cell whitespace-nowrap">
         <span class="text-xs text-gray-500 dark:text-gray-400">{{ $file->type->name() }}</span>
     </td>
 
     {{-- Size --}}
-    <td class="py-1.5 px-2 hidden md:table-cell">
+    <td class="py-1.5 px-2 hidden md:table-cell whitespace-nowrap">
         <span class="text-xs text-gray-500 dark:text-gray-400 font-mono">
             @if(method_exists($file, 'humanSize'))
                 {{ $file->humanSize() }}
@@ -91,14 +93,14 @@
     </td>
 
     {{-- Created --}}
-    <td class="py-1.5 px-2 hidden md:table-cell">
+    <td class="py-1.5 px-2 hidden md:table-cell whitespace-nowrap">
         <span class="text-xs text-gray-500 dark:text-gray-400">
             {{ $file->formattedCreatedAt() }}
         </span>
     </td>
 
     {{-- Context menu trigger --}}
-    <td class="py-1.5 px-2 text-right w-8">
+    <td class="py-1.5 px-2 text-right w-8 whitespace-nowrap">
         <button
             type="button"
             class="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"

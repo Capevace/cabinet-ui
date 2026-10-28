@@ -2,23 +2,17 @@
 
 <div
     class="flex-1 flex flex-col"
-    @dragenter="
-        if (!$event.dataTransfer.getData('application/cabinet-identifier') && draggingVirtualFile === false) {
-            draggingFiles++;
-        }
-    "
+    @dragenter.prevent="if (isFileDrag($event)) { handleFileDragOver($event); }"
+    @dragover.prevent="if (isFileDrag($event)) { handleFileDragOver($event); }"
     @dragleave="
-        if (!$event.dataTransfer.getData('application/cabinet-identifier')) {
-            draggingFiles--;
-        }
-    "
-    @drop.prevent="
-        if (!$event.dataTransfer.getData('application/cabinet-identifier')) {
-            uploadDroppedFile($event);
-            $event.preventDefault();
+        const to = $event.relatedTarget;
+
+        if (isFileDrag($event) && (!to || !$event.currentTarget.contains(to))) {
             draggingFiles = 0;
+            clearFolderDropTarget();
         }
     "
+    @drop.prevent="if (isFileDrag($event)) { uploadDroppedFile($event, resolveFolderDropTarget($event)); }"
 >
     {{-- Grid view --}}
     <ul
@@ -30,7 +24,8 @@
         x-show="viewMode === 'grid'"
         @if ($viewMode !== 'grid') x-cloak @endif
     >
-        {{-- <x-cabinet-filament::finder.upload-template /> --}}
+        {{-- Upload placeholders --}}
+        <x-cabinet-filament::finder.upload-template />
 
         @foreach($files as $file)
             @if ($file instanceof \Cabinet\File)
@@ -57,14 +52,24 @@
         @if ($viewMode !== 'list') x-cloak @endif
     >
         {{-- Upload placeholders in list mode --}}
-        <template x-for="(upload, index) of uploads">
+        <template x-for="(upload, index) of gridUploads()">
             <div
                 :key="upload.id + index"
-                class="flex items-center gap-3 px-3 py-2 border-b border-gray-200 dark:border-gray-800 last:border-0 text-sm text-gray-500"
+                class="flex h-10 items-center gap-3 px-3 border-b border-gray-200 dark:border-gray-800 last:border-0 text-sm text-gray-500"
+                :class="upload.error ? 'text-danger-600 dark:text-danger-400' : ''"
             >
-                <x-filament::loading-indicator class="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <template x-if="upload.error">
+                    @svg('heroicon-o-exclamation-triangle', 'w-5 h-5 text-danger-500 flex-shrink-0')
+                </template>
+                <template x-if="!upload.error">
+                    <x-filament::loading-indicator class="w-5 h-5 text-gray-400 flex-shrink-0" />
+                </template>
                 <span class="flex-1 truncate" x-text="upload.name"></span>
-                <span class="text-xs text-gray-400" x-text="Math.round(upload.progress * 100) + '%'"></span>
+                <span
+                    class="text-xs"
+                    :class="upload.error ? 'text-danger-600 dark:text-danger-400' : 'text-gray-400'"
+                    x-text="upload.error ? @js(__('cabinet::messages.unknown-error')) : Math.min(99, Math.round(upload.progress * 100)) + '%'"
+                ></span>
             </div>
         </template>
 

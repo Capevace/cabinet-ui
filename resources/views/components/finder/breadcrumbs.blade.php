@@ -19,14 +19,24 @@
                     'flex-shrink w-auto' => $breadcrumb->folderId !== $folder->id
                 ])
                 wire:key="{{ $breadcrumb->folderId }}"
-                @dragover.prevent="draggingOverFolder = '{{ $breadcrumb->folderId }}'"
-                @dragleave.self="draggingOverFolder = null"
-                @drop="
-                    const json = $event.dataTransfer.getData('application/cabinet-identifier');
-                    const identifier = JSON.parse(json);
+                data-drop-folder="{{ $breadcrumb->folderId }}"
+                data-drop-folder-name="{{ $breadcrumb->label }}"
+                @dragover.prevent="if (isFileDrag($event)) { resolveFolderDropTarget($event) || trackDropHint($event); }"
+                @dragleave.self="clearFolderDropTarget()"
+                @drop.prevent="
+                    if (isFileDrag($event)) {
+                        uploadDroppedFile($event, resolveFolderDropTarget($event));
+                    } else {
+                        const json = $event.dataTransfer.getData('application/cabinet-identifier');
 
-                    $wire.moveFile(identifier.source, identifier.id, '{{ $breadcrumb->folderId }}');
-                    draggingOverFolder = null;
+                        if (json) {
+                            const identifier = JSON.parse(json);
+
+                            $wire.moveFile(identifier.source, identifier.id, '{{ $breadcrumb->folderId }}');
+                        }
+
+                        clearFolderDropTarget();
+                    }
                 "
             >
                 @if (! $loop->first)
@@ -55,7 +65,7 @@
                     {{-- wire:navigate --}}
                     class="line-clamp-1 text-sm font-medium text-gray-500 outline-none transition duration-75 hover:text-gray-700 focus:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:text-gray-200"
                     :class="{
-                        'ring-2 ring-primary-500 scale-125 rounded-md p-1': draggingOverFolder === '{{ $breadcrumb->folderId }}',
+                        'rounded-md bg-primary-100 dark:bg-primary-950/50 px-1 -mx-1 text-primary-700 dark:text-primary-300': draggingOverFolder === '{{ $breadcrumb->folderId }}',
                     }"
                 >
                     {{ $breadcrumb->label }}

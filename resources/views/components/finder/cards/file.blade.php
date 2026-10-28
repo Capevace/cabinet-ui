@@ -16,6 +16,7 @@
         draggingVirtualFile = false;
         draggingFiles = 0;
     "
+    data-file-select="{{ json_encode($file->toIdentifier()) }}"
     draggable="true"
     x-on:dragstart.self="
         draggingVirtualFile = true;
@@ -50,15 +51,20 @@
     "
     @drop.prevent="
         const json = $event.dataTransfer.getData('application/cabinet-identifier');
-        const identifier = JSON.parse(json);
 
-        $wire.moveFile(identifier.source, identifier.id, draggingOverFolder);
+        if (json) {
+            const identifier = JSON.parse(json);
+
+            $wire.moveFile(identifier.source, identifier.id, draggingOverFolder);
+        }
+
         draggingOverFolder = null;
     "
 >
     <button
         class="flex flex-col flex-1 w-full text-left"
         type="button"
+        @mousedown="handleFilePress(@js($file->toIdentifier()), $event)"
         @click="
             if (!(selectionEnabled && (!canSelectMore && !isFileSelected(@js($file->toIdentifier())) || {{ $disabled ? 'true' : 'false' }}))) {
                 handleFileClick(@js($file->toIdentifier()), $event);

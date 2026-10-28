@@ -5,7 +5,6 @@ namespace Cabinet\Filament\Livewire\Finder\Actions;
 use Filament\Actions\Action;
 use Cabinet\Facades\Cabinet;
 use Cabinet\Filament\Livewire\Finder;
-use Livewire\Component;
 
 class DownloadBulk extends Action
 {
@@ -21,8 +20,8 @@ class DownloadBulk extends Action
         $this->label(__('cabinet::actions.download-bulk'));
         $this->icon('heroicon-o-arrow-down-tray');
 
-        $this->action(function (array $arguments, Component $livewire) {
-            $files = $arguments['files'] ?? [];
+        $this->action(function (array $arguments, Finder $livewire) {
+            $files = $livewire->bulkActionFiles($arguments);
             $jsExpressions = [];
 
             foreach ($files as $identifier) {
@@ -42,12 +41,14 @@ class DownloadBulk extends Action
                     ->toString();
 
                 $jsExpressions[] = <<<JS
-                    const a = document.createElement('a');
-                    a.href = '{$url}';
-                    a.download = '{$name}';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                    {
+                        const a = document.createElement('a');
+                        a.href = '{$url}';
+                        a.download = '{$name}';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    }
                 JS;
             }
 

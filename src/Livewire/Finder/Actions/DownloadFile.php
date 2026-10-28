@@ -53,12 +53,14 @@ class DownloadFile extends Action
                 ->toString();
 
             $livewire->js(expression: (<<<JS
-                const a = document.createElement('a');
-                a.href = '{$url}';
-                a.download = '{$name}';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                {
+                    const a = document.createElement('a');
+                    a.href = '{$url}';
+                    a.download = '{$name}';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
             JS));
         });
     }

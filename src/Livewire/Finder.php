@@ -35,6 +35,11 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Session;
+use Livewire\Features\SupportFileUploads\WithFileUploads;
+use Cabinet\Filament\Jobs\StoreUploadedFileJob;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
 use Livewire\Component;
 use Illuminate\Support\Str;
 use Cabinet\Folder;
@@ -54,6 +59,7 @@ class Finder extends Component implements HasForms, HasActions
 {
     use InteractsWithActions;
     use InteractsWithForms;
+    use WithFileUploads;
 
     #[Locked]
     public bool $modal = true;
@@ -129,6 +135,152 @@ class Finder extends Component implements HasForms, HasActions
 	public array $uploadedFiles = [];
 
     /**
+     * Files left to send in the drop currently being uploaded, announced by
+     * the browser before every chunk. The chunk that announces 0 reports the
+     * finished drop to the user.
+     */
+    public int $uploadFilesRemaining = 0;
+
+    /**
+     * Files stored so far for the drop currently being uploaded, counted across
+     * its chunks so the success notification can name the whole drop.
+     */
+    public int $uploadedFilesInBatch = 0;
+
+    /**
+     * Folder the current drop is going into, null for the folder the finder
+     * was showing when the drop happened.
+     */
+    public ?string $uploadTargetFolderId = null;
+
+    /**
+     * Drop currently being uploaded, announced by the browser so a cancelled
+     * drop can be recognised by the queued storage jobs.
+     */
+    public ?string $uploadBatchId = null;
+
+    /**
+     * Maximum number of files sent in a single upload request.
+     *
+     * PHP silently drops every file beyond `max_file_uploads` from a multipart
+     * request and prints a startup warning into the response body, which makes
+     * the JSON response (and with it the whole upload) unreadable for Livewire.
+     * A drop is therefore split into chunks of this size.
+     */
+    #[Computed]
+    public function uploadChunkSize(): int
+    {
+        $maxFileUploads = (int) ini_get('max_file_uploads');
+
+        return min($maxFileUploads > 0 ? $maxFileUploads : 20, 20);
+    }
+
+    /**
+     * Folder a drop is stored in, falling back to the open folder when the
+     * announced target does not exist (any more).
+     */
+    protected function uploadFolder(?string $folderId = null): ?Folder
+    {
+        $target = filled($folderId) ? Cabinet::folder($folderId) : null;
+
+        return $target ?? $this->folder;
+    }
+
+    /**
+     * Store the chunk that just arrived, then clean up its temporary files.
+     */
+    public function updatedUploadedFiles(): void
+    {
+        $folder = $this->uploadFolder($this->uploadTargetFolderId);
+        $source = Cabinet::getSource(SpatieMediaSource::TYPE);
+
+        $files = collect($this->uploadedFiles)
+            ->filter(fn (?TemporaryUploadedFile $file) => $file?->exists());
+
+        if ($files->isEmpty()) {
+            Notification::make()
+                ->danger()
+                ->title(__('cabinet::messages.no-files-uploaded'))
+                ->send();
+
+            return;
+        }
+
+        $invalidFiles = $files
+            ->filter(function (TemporaryUploadedFile $file) {
+                $type = Cabinet::determineFileTypeFromMime($file->getMimeType());
+
+                return $this->globalAcceptableTypeChecker->isAccepted($type) === false;
+            });
+
+        $validFiles = $files->diff($invalidFiles);
+
+        if ($invalidFiles->isNotEmpty()) {
+            $names = $invalidFiles
+                ->map(fn (TemporaryUploadedFile $file) => $file->getClientOriginalName());
+
+            if ($names->count() > 3) {
+                $names = $names->take(3)->push('...');
+            }
+
+            Notification::make()
+                ->warning()
+                ->title(trans_choice('cabinet::messages.invalid-file-types', $invalidFiles->count()))
+                ->body($names->join(', '))
+                ->send();
+
+            $invalidFiles->each->delete();
+        }
+
+        // Storage happens in the background: uploading into a bucket can take
+        // longer than the request timeout, and while such a request runs the
+        // finder cannot do anything else (and cancelling would not stop it).
+        $disk = FileUploadConfiguration::disk();
+
+        $validFiles->each(function (TemporaryUploadedFile $file) use ($disk, $source, $folder) {
+            $queuedPath = 'livewire-upload-queue/' . str()->uuid();
+
+            Storage::disk($disk)->put($queuedPath, $file->readStream());
+
+            StoreUploadedFileJob::dispatch(
+                disk: $disk,
+                path: $queuedPath,
+                name: $file->getClientOriginalName(),
+                mimeType: $file->getMimeType(),
+                sourceName: $source::TYPE,
+                folderId: $folder?->id,
+                batchId: $this->uploadBatchId,
+            );
+
+            $file->delete();
+        });
+
+        $this->uploadedFilesInBatch += $validFiles->count();
+
+        // A drop that exceeds the chunk size arrives in several requests; only
+        // the last one (nothing left to send) reports the finished drop.
+        if ($this->uploadFilesRemaining <= 0) {
+            $skippedFilesText = $invalidFiles->count() > 0
+                ? trans_choice('cabinet::messages.files-skipped', $invalidFiles->count())
+                : null;
+
+            Notification::make()
+                ->success()
+                ->title(trans_choice('cabinet::messages.files-uploaded-successfully', $this->uploadedFilesInBatch))
+                ->body($skippedFilesText)
+                ->send();
+
+            $this->uploadedFilesInBatch = 0;
+        }
+
+        if ($folder !== null) {
+            $this->dispatch('cabinet:files-uploaded', folderId: $folder->id);
+        }
+
+        $this->refresh();
+    }
+
+    /**
      * Returns the direct child folders of a given folder for the tree sidebar.
      * Called via $wire.call('getSubfolders', folderId) from Alpine.
      *
@@ -187,81 +339,6 @@ class Finder extends Component implements HasForms, HasActions
 
         $this->selectedFiles = $selectedFiles;
     }
-
-	public function updatedUploadedFiles()
-	{
-		$folder = $this->folder;
-		$source = Cabinet::getSource(SpatieMediaSource::TYPE);
-        $files = collect($this->uploadedFiles)
-            // Make sure the file exists
-            ->filter(fn (?TemporaryUploadedFile $file) => $file?->exists());
-
-        if ($files->isEmpty()) {
-            Notification::make()
-                ->danger()
-                ->title(__('cabinet::messages.no-files-uploaded'))
-                ->send();
-
-            return;
-        }
-
-        $invalidFiles = $files
-            ->filter(function (TemporaryUploadedFile $file) {
-                $type = Cabinet::determineFileTypeFromMime($file->getMimeType());
-
-                return $this->globalAcceptableTypeChecker->isAccepted($type) === false;
-            });
-
-        $validFiles = $files->diff($invalidFiles);
-
-        if ($invalidFiles->isNotEmpty()) {
-            $names = $invalidFiles
-                ->map(fn (TemporaryUploadedFile $file) => $file->getClientOriginalName());
-
-            // If there are more than 3 files, only show the first 3 and add an ellipsis
-            if ($names->count() > 3) {
-                $names = $names->take(3)->push('...');
-            }
-
-            Notification::make()
-                ->warning()
-                ->title(trans_choice('cabinet::messages.invalid-file-types', $invalidFiles->count()))
-                ->body($names->join(', '))
-                ->send();
-
-            // Delete the temporary files
-            $invalidFiles->each->delete();
-        }
-
-        $validFiles
-            // Upload the file
-            ->each(function (TemporaryUploadedFile $file) use ($folder, $source, $invalidFiles) {
-                $source->upload($folder, $file);
-
-                // Delete the file from the uploads directory, now that it's been uploaded to destination
-                $file->delete();
-            });
-
-        $skippedFilesText = $invalidFiles->count() > 0
-            ? trans_choice('cabinet::messages.files-skipped', $invalidFiles->count())
-            : null;
-
-        Notification::make()
-            ->success()
-            ->title(trans_choice('cabinet::messages.files-uploaded-successfully', $validFiles->count()))
-            ->body($skippedFilesText)
-            ->send();
-
-        $this->refresh();
-	}
-
-//    #[On('openFinder')]
-//	public function openFinder(Folder $folder, ?Finder\SelectionMode $selectionMode = null)
-//	{
-//        dd('wat');
-//		$this->folder = $folder;
-//		$this->selectionMode = $selectionMode;
-//	}
 
 	public function closeFinder()
 	{
@@ -378,6 +455,17 @@ class Finder extends Component implements HasForms, HasActions
     {
         $this->selectedFiles = [];
         $this->syncUrlState();
+    }
+
+    /**
+     * The browser tells us it cancelled a drop: mark it so the storage jobs
+     * that are still queued for it skip their file.
+     */
+    public function abandonUploads(?string $batchId = null): void
+    {
+        if (filled($batchId)) {
+            Cache::put(StoreUploadedFileJob::cancelledKey($batchId), true, now()->addHours(2));
+        }
     }
 
     public function refresh()
@@ -732,7 +820,17 @@ class Finder extends Component implements HasForms, HasActions
             return [];
         }
 
-        return \Cabinet\Facades\Cabinet::resolveFileReferences($file);
+        return collect(Cabinet::resolveFileReferences($file))
+            ->map(function (array $reference): array {
+                // The panel renders client-side, so icon names have to arrive
+                // as markup (same as the context menu items).
+                $reference['iconHtml'] = $reference['icon'] === null
+                    ? null
+                    : svg($reference['icon'], 'w-4 h-4')->toHtml();
+
+                return $reference;
+            })
+            ->all();
     }
 
     public function moveFileInSelection(int $from, int $to)
@@ -760,6 +858,22 @@ class Finder extends Component implements HasForms, HasActions
             $this->uploadFileAction,
             $this->createFolderAction
         ];
+    }
+
+    /**
+     * Files a bulk action operates on.
+     *
+     * The context menu only knows the file it was opened on, so it mounts the
+     * action with that single identifier as arguments. Bulk actions ("Delete
+     * all", "Download all") act on the current selection instead, unless the
+     * caller passed an explicit `files` list.
+     *
+     * @param  array<string, mixed>  $arguments
+     * @return array<int, array{source: string, id: string}>
+     */
+    public function bulkActionFiles(array $arguments): array
+    {
+        return $arguments['files'] ?? $this->selectedFiles;
     }
 
     #[Computed]
