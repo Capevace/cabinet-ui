@@ -30,6 +30,7 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -948,6 +949,20 @@ class Finder extends Component implements HasForms, HasActions
             'spatie-media' => 'media',
             default => $source,
         };
+    }
+
+    /**
+     * Render extra entries before the files of the current folder, for
+     * example placeholders for files that are still being created.
+     *
+     * Override this in a subclass. Return `<li>` cards for the grid view
+     * and `<tr>` rows for the list view, or null to render nothing.
+     *
+     * @param string $viewMode 'grid' or 'list'
+     */
+    public function renderLeadingEntries(string $viewMode): ?Htmlable
+    {
+        return null;
     }
 
     /**
