@@ -42,6 +42,7 @@
         draggingVirtualFile: null,
         draggingOverFolder: null,
         draggingOverFolderName: null,
+        movingToFolder: null,
         dragHint: { x: 0, y: 0 },
         /** Upload queue: [{ id, folderId, folderName, files, progress, error, state }] */
         uploadQueue: [],
@@ -195,6 +196,96 @@
         clearFolderDropTarget() {
             this.draggingOverFolder = null;
             this.draggingOverFolderName = null;
+        },
+
+        isFinderFileDrag(event) {
+            return Array.from(event.dataTransfer?.types ?? []).includes('application/cabinet-identifiers');
+        },
+
+        /**
+         * A file of this finder is picked up. A file of a selection takes the
+         * whole selection along. While files are being picked the selection
+         * can span folders, so only the file itself moves then.
+         */
+        startFileDrag(event, file) {
+            const files = ! this.selectionEnabled && this.selectedFiles.length > 1 && this.isFileSelected(file)
+                ? this.selectedFiles
+                : [file];
+
+            this.draggingVirtualFile = true;
+            this.draggingFiles = 0;
+
+            event.dataTransfer.setData('application/cabinet-identifiers', JSON.stringify(files));
+            event.dataTransfer.effectAllowed = 'move';
+
+            if (files.length > 1) {
+                this.setDragCountImage(event, files.length);
+            }
+        },
+
+        /**
+         * Show how many files are dragged. The browser copies the element when
+         * the drag starts, so it can go again right after.
+         */
+        setDragCountImage(event, count) {
+            const image = document.createElement('div');
+
+            image.textContent = count;
+            image.style.cssText = 'position: fixed; top: -100px; min-width: 32px; padding: 6px 10px; border-radius: 9999px; background: var(--primary-600); color: #fff; font: 600 14px sans-serif; text-align: center;';
+            document.body.appendChild(image);
+
+            event.dataTransfer.setDragImage(image, 16, 16);
+
+            setTimeout(() => image.remove());
+        },
+
+        /**
+         * Folder targets outside of the file area: the sidebar shortcuts.
+         */
+        handleFolderDragOver(event) {
+            if (this.isFileDrag(event)) {
+                event.preventDefault();
+                this.handleFileDragOver(event);
+            } else if (this.isFinderFileDrag(event)) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                this.resolveFolderDropTarget(event);
+            }
+        },
+
+        handleFolderDragLeave(event) {
+            if (event.currentTarget.contains(event.relatedTarget)) {
+                return;
+            }
+
+            this.draggingFiles = 0;
+            this.clearFolderDropTarget();
+        },
+
+        /**
+         * Something was dropped on a folder: files from outside of the browser
+         * are uploaded into it, files of this finder are moved into it.
+         */
+        dropOnFolder(event, folderId) {
+            if (this.isFileDrag(event)) {
+                this.uploadDroppedFile(event, folderId);
+
+                return;
+            }
+
+            const json = event.dataTransfer.getData('application/cabinet-identifiers');
+
+            this.draggingVirtualFile = false;
+            this.clearFolderDropTarget();
+
+            if (! json || ! folderId) {
+                return;
+            }
+
+            this.movingToFolder = folderId;
+
+            this.$wire.moveFiles(JSON.parse(json), folderId)
+                .finally(() => this.movingToFolder = null);
         },
 
         /**

@@ -23,21 +23,7 @@
                 data-drop-folder-name="{{ $breadcrumb->label }}"
                 @dragover.prevent="if (isFileDrag($event)) { resolveFolderDropTarget($event) || trackDropHint($event); }"
                 @dragleave.self="clearFolderDropTarget()"
-                @drop.prevent="
-                    if (isFileDrag($event)) {
-                        uploadDroppedFile($event, resolveFolderDropTarget($event));
-                    } else {
-                        const json = $event.dataTransfer.getData('application/cabinet-identifier');
-
-                        if (json) {
-                            const identifier = JSON.parse(json);
-
-                            $wire.moveFile(identifier.source, identifier.id, '{{ $breadcrumb->folderId }}');
-                        }
-
-                        clearFolderDropTarget();
-                    }
-                "
+                @drop.prevent="dropOnFolder($event, '{{ $breadcrumb->folderId }}')"
             >
                 @if (! $loop->first)
                     <x-filament::icon

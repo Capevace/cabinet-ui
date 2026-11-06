@@ -2,7 +2,10 @@
 
 namespace Cabinet\Filament\Livewire;
 
+use Cabinet\Filament\DTO\FileIdentifier;
+use Cabinet\Filament\Exceptions\FolderNotAllowed;
 use Cabinet\Filament\Livewire\Finder\SelectionMode;
+use Cabinet\Filament\Services\Mutations\MoveFilesToFolder;
 use Cabinet\Facades\Cabinet;
 use Cabinet\Filament\Livewire\Finder\AcceptableTypeChecker;
 use Cabinet\Filament\Livewire\Finder\Actions\CreateFolder;
@@ -374,6 +377,9 @@ class Finder extends Component implements HasForms, HasActions
                 $this->selectedFiles = $this->parseUrlSelection($urlSelected);
             }
         }
+
+        // Most pages only pass the folder they open, which then is the root.
+        $this->initialFolderId ??= $this->folderId;
     }
 
     /**
@@ -553,31 +559,62 @@ class Finder extends Component implements HasForms, HasActions
         $this->syncUrlState();
     }
 
-    public function moveFile(string $source, string $id, ?string $folderId)
+    /**
+     * Move files of the open folder into another folder.
+     *
+     * @param  array<int, mixed>  $files  File identifiers from the browser.
+     */
+    public function moveFiles(array $files, ?string $folderId, MoveFilesToFolder $moveFilesToFolder): void
     {
-        if ($folderId === null) {
+        if ($this->folder === null || $folderId === null) {
             return;
         }
 
-        $validFolderId = $this->files
-            ->filter(fn (File|Folder $file) => $file instanceof Folder)
-            ->first(fn (Folder $folder) => $folder->id === $folderId)
-            ?->id;
+        try {
+            $movedFiles = $moveFilesToFolder->run(
+                sourceFolder: $this->folder,
+                targetFolderId: $folderId,
+                fileIdentifiers: collect($files)
+                    ->map(fn (mixed $file): ?FileIdentifier => FileIdentifier::tryFromBrowser($file))
+                    ->filter()
+                    ->all(),
+                allowedFolderIds: $this->getAllowedFolderIds(),
+            );
+        } catch (FolderNotAllowed) {
+            Notification::make()
+                ->danger()
+                ->title(__('cabinet::messages.unknown-error'))
+                ->send();
 
-        if ($validFolderId === null) {
-            $validFolderId = $this->breadcrumbs
-                ->filter(fn (Breadcrumb $breadcrumb) => $breadcrumb->folderId === $folderId)
-                ->first()
-                ?->folderId;
+            return;
         }
 
-        if ($validFolderId !== null && $folder = Cabinet::findCabinetDirectory($validFolderId)) {
-            $file = Cabinet::file($source, $id);
+        // The selection only spans folders while files are being picked.
+        if ($this->selectionMode === null) {
+            foreach ($movedFiles as $file) {
+                $this->deselectFile($file->source, $file->id);
+            }
 
-            Cabinet::move($file, $folder);
-
-            $this->refresh();
+            $this->syncUrlState();
         }
+
+        $this->refresh();
+    }
+
+    /**
+     * The root folder and the sidebar items. Sidebar items can lie outside of
+     * the root: a deal also links the folders of its estates.
+     *
+     * @return string[]
+     */
+    protected function getAllowedFolderIds(): array
+    {
+        return collect($this->sidebarItems)
+            ->map(fn (SidebarItemDto $item): string => $item->id)
+            ->push($this->initialFolderId)
+            ->filter()
+            ->values()
+            ->all();
     }
 
     #[Computed]
