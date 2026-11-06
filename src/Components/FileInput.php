@@ -10,6 +10,7 @@ use Cabinet\Filament\Components\Concerns\HasEmptyState;
 use Cabinet\Filament\Components\Concerns\HasHeadings;
 use Cabinet\Filament\Components\Concerns\HasMax;
 use Cabinet\Filament\Components\Concerns\HasRelationship;
+use Cabinet\Filament\Components\Concerns\HasRemoveFileAction;
 use Cabinet\Filament\Components\Concerns\HasReorderAction;
 use Cabinet\Filament\Components\Concerns\HasRootDirectory;
 use Cabinet\Filament\Components\Concerns\HasSelectAction;
@@ -33,6 +34,7 @@ class FileInput extends Field
     use HasHeadings;
     use HasMax;
     use HasRelationship;
+    use HasRemoveFileAction;
     use HasReorderAction;
     use HasRootDirectory;
     use HasSelectAction;
@@ -55,6 +57,7 @@ class FileInput extends Field
         $this->registerActions([
             fn (FileInput $component) => $this->makeConfirmSelectionAction($component),
             fn (FileInput $component) => $this->makeReorderAction($component),
+            fn (FileInput $component) => $this->makeRemoveFileAction($component),
         ]);
 
 
