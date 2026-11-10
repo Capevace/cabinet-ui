@@ -12,14 +12,7 @@
     data-drop-folder-name="{{ $folder->name }}"
     @dragover="draggingOverFolder = '{{ $folder->id }}'"
     @dragleave.self="clearFolderDropTarget()"
-    @drop.prevent="
-        clearFolderDropTarget();
-        const json = $event.dataTransfer.getData('application/cabinet-identifier');
-        if (json) {
-            const identifier = JSON.parse(json);
-            $wire.moveFile(identifier.source, identifier.id, '{{ $folder->id }}');
-        }
-    "
+    @drop.prevent="dropOnFolder($event, '{{ $folder->id }}')"
     wire:click.prevent="openFolder('{{ $folder->id }}')"
     @contextmenu="openContextMenu('{{ $folder->type->slug() }}', $event, @js($folder->toIdentifier()))"
 >

@@ -14,7 +14,7 @@
     $emptyStateIcon = $getEmptyStateIcon();
     $emptyStateLabel = $getEmptyStateLabel();
 
-    $canEdit = false;
+    $canEdit = ! $isDisabled();
 
     $wrapperView = isset($getFieldWrapperView)
         ? $getFieldWrapperView()
@@ -32,6 +32,7 @@
         x-data="{
             state: @entangle($statePath).live,
             loading: false,
+            removingFile: null,
 
             confirmSelection(data) {
                 // Make sure this is the correct Livewire component
@@ -57,12 +58,14 @@
                 @endunless
             },
 
-            removeFile(file) {
-                @if (!$multiple)
-                    this.state = null;
-                @else
-                    this.state = this.state.filter(f => f.id !== file.id);
-                @endif
+            async removeFile(file) {
+                this.removingFile = `${file.source}:${file.id}`;
+
+                try {
+                    await {!! $getRemoveFileActionMountJS(fileVariable: 'file') !!}
+                } finally {
+                    this.removingFile = null;
+                }
             },
 
             // Helper so we can use the same template for single and multiple files
@@ -129,8 +132,8 @@
                 <x-cabinet-filament::forms.file-input.file-preview-list
                     :wire:key="$file->uniqueId()"
                     :file="$file"
-                    :disable-delete="!$canEdit"
-                    :sortable="$hasMultiple()"
+                    :disable-delete="! $canRemoveFiles()"
+                    :sortable="$canEdit && $hasMultiple()"
                 />
             @endforeach
         </div>

@@ -36,4 +36,30 @@
             <span>{{ $file->humanSize() }}</span>
         </p>
     </div>
+
+    @unless ($disableDelete)
+        {{-- The whole row is a drag handle: a press on the button must not start a drag. --}}
+        <div
+            class="flex-shrink-0"
+            x-on:pointerdown.stop
+            x-on:mousedown.stop
+        >
+            <x-filament::loading-indicator
+                x-show="removingFile === '{{ $file->source }}:{{ $file->id }}'"
+                x-cloak
+                class="w-5 h-5 text-gray-400"
+            />
+
+            <x-filament::icon-button
+                icon="heroicon-m-x-mark"
+                color="gray"
+                size="sm"
+                :label="__('cabinet::actions.clear-selection')"
+                :tooltip="__('cabinet::actions.clear-selection')"
+                x-show="removingFile !== '{{ $file->source }}:{{ $file->id }}'"
+                x-bind:disabled="removingFile !== null"
+                x-on:click.stop="removeFile({ source: '{{ $file->source }}', id: '{{ $file->id }}' })"
+            />
+        </div>
+    @endunless
 </div>

@@ -13,16 +13,11 @@
     }"
     data-file-select="{{ json_encode($file->toIdentifier()) }}"
     draggable="true"
-    x-on:dragstart="
-        draggingVirtualFile = true;
-        draggingFiles = 0;
-        const json = JSON.stringify(@js($file->toIdentifier()));
-        $event.dataTransfer.setData('application/cabinet-identifier', json);
-        $event.dataTransfer.effectAllowed = 'move';
-    "
+    x-on:dragstart="startFileDrag($event, @js($file->toIdentifier()))"
     x-on:dragend="
         draggingVirtualFile = false;
         draggingFiles = 0;
+        clearFolderDropTarget();
     "
     @mousedown="handleFilePress(@js($file->toIdentifier()), $event)"
     @click="

@@ -63,8 +63,7 @@ trait HasRelationship
                 $relation = $record->{$relationship}();
 
                 if ($relation instanceof BelongsTo) {
-                    $reference = Cabinet::createReference($file);
-                    $relation->associate($reference);
+                    $relation->associate($file === null ? null : Cabinet::createReference($file));
 
                     $record->save();
                 } else {

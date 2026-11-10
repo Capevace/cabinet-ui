@@ -15,19 +15,11 @@
     x-on:dragend="
         draggingVirtualFile = false;
         draggingFiles = 0;
+        clearFolderDropTarget();
     "
     data-file-select="{{ json_encode($file->toIdentifier()) }}"
     draggable="true"
     x-on:dragstart.self="
-        draggingVirtualFile = true;
-        draggingFiles = 0;
-
-        const json = JSON.stringify(@js($file->toIdentifier()));
-
-        $event.dataTransfer.setData('application/cabinet-identifier', json);
-        $event.dataTransfer.effectAllowed='move';
-        $event.dataTransfer.dropEffect='move';
-
         const thumbnail = document.createElement('img');
         thumbnail.src = '{{ $thumbnailUrl }}';
         thumbnail.style.width = '100%';
@@ -48,18 +40,11 @@
 
         // Set element to dataTransfer
         $event.dataTransfer.setDragImage(div, 200, 150);
+        setTimeout(() => div.remove());
+
+        startFileDrag($event, @js($file->toIdentifier()));
     "
-    @drop.prevent="
-        const json = $event.dataTransfer.getData('application/cabinet-identifier');
-
-        if (json) {
-            const identifier = JSON.parse(json);
-
-            $wire.moveFile(identifier.source, identifier.id, draggingOverFolder);
-        }
-
-        draggingOverFolder = null;
-    "
+    @drop.prevent="dropOnFolder($event, draggingOverFolder)"
 >
     <button
         class="flex flex-col flex-1 w-full text-left"

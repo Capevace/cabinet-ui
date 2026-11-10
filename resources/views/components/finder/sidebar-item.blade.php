@@ -13,11 +13,18 @@
         'truncate relative font-semibold text-left flex items-center justify-center gap-x-3 rounded-lg px-2 py-2 text-sm text-gray-700 outline-none transition duration-75 hover:bg-gray-100 focus:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/5 dark:focus:bg-white/5',
         'bg-gray-100 text-primary-600 dark:bg-white/5 dark:text-primary-400' => $active,
     ]) }}
-
+    :class="{
+        'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-950/40': draggingOverFolder === '{{ $item->id }}',
+    }"
 
     x-data="{}"
     type="button"
     wire:click="openFolder('{{ $item->id }}')"
+    data-drop-folder="{{ $item->id }}"
+    data-drop-folder-name="{{ $item->label }}"
+    x-on:dragover="handleFolderDragOver($event)"
+    x-on:dragleave="handleFolderDragLeave($event)"
+    x-on:drop.prevent="dropOnFolder($event, '{{ $item->id }}')"
 >
     <x-filament::loading-indicator
         wire:loading
@@ -25,8 +32,15 @@
         class="w-6 h-6 text-primary-600 dark:text-primary-400"
     />
 
+    <x-filament::loading-indicator
+        x-show="movingToFolder === '{{ $item->id }}'"
+        x-cloak
+        class="w-6 h-6 text-primary-600 dark:text-primary-400"
+    />
+
     <x-filament::icon
         :icon="$item->icon"
+        x-show="movingToFolder !== '{{ $item->id }}'"
         wire:loading.remove
         wire:target="openFolder('{{ $item->id }}')"
 
