@@ -35,3 +35,48 @@ custom database tables, etc).**
 > This package requires [capevace/cabinet](https://github.com/capevace/cabinet) to be installed.
 > 
 > See the [documentation](https://github.com/capevace/cabinet) for more information.
+
+## Extending the finder
+
+Apps can add their own actions to every finder from a service provider. A subclass of `Finder` is not necessary.
+
+### Context menu entries
+
+```php
+use Cabinet\Filament\Livewire\Finder;
+use Cabinet\Filament\Livewire\Finder\ContextMenuAction;
+
+Finder::registerContextMenuAction(
+    ContextMenuAction::make(fn (): Action => EditImageAction::make())
+        ->menus(['image'])          // file type slugs, or ContextMenuAction::BULK_MENU
+        ->after('previewFile')      // or ->first(); without it, the entry goes to the end
+        ->visible(fn (Finder $finder): bool => $finder->selectionMode === null),
+);
+```
+
+- The finder creates the action again for each request, so it keeps no state between requests.
+- The entry shows only when the condition is true and the action is not hidden or unauthorized.
+- The menus are built per file type, not per file. The action must check the file it gets in its arguments.
+- The action name must not be the name of a built-in finder action.
+
+### Actions without a menu entry
+
+```php
+Finder::registerAction(fn (): Action => CancelUploadAction::make());
+```
+
+A view (for example a render hook) mounts it with `$wire.mountAction('cancelUpload', { id: 1 })`.
+
+### Render hooks
+
+The finder renders Filament render hooks. Each hook gets the finder as `$data['finder']`.
+
+```php
+use Cabinet\Filament\View\FinderRenderHook;
+use Filament\Support\Facades\FilamentView;
+
+FilamentView::registerRenderHook(
+    FinderRenderHook::GRID_ENTRIES_BEFORE, // <li> cards before the files; LIST_ENTRIES_BEFORE for <tr> rows
+    fn (array $data): View => view('my-placeholders', ['finder' => $data['finder']]),
+);
+```

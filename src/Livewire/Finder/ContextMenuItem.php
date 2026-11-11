@@ -10,7 +10,7 @@ class ContextMenuItem implements Arrayable
 {
     public function __construct(
         public string $label,
-        public string|HtmlString $icon,
+        public string|HtmlString|null $icon,
         public string $actionName,
         public ?string $url = null,
         public bool $shouldOpenInNewTab = false,
@@ -23,9 +23,11 @@ class ContextMenuItem implements Arrayable
     {
         return [
             'label' => $this->label,
-            'icon' => $this->icon instanceof HtmlString
-                ? $this->icon
-                : svg($this->icon, 'h-full w-full')->toHtml(),
+            'icon' => match (true) {
+                $this->icon === null => null,
+                $this->icon instanceof HtmlString => $this->icon,
+                default => svg($this->icon, 'h-full w-full')->toHtml(),
+            },
             'actionName' => $this->actionName,
             'url' => $this->url,
 

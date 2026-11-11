@@ -16,6 +16,8 @@ use Cabinet\Filament\Livewire\Finder\Actions\RenameFile;
 use Cabinet\Filament\Livewire\Finder\Actions\ShareFile;
 use Cabinet\Filament\Livewire\Finder\Actions\UploadFile;
 use Cabinet\Filament\Livewire\Finder\Breadcrumb;
+use Cabinet\Filament\Livewire\Finder\ContextMenuAction;
+use Cabinet\Filament\Livewire\Finder\Concerns\InteractsWithRegisteredActions;
 use Cabinet\Filament\Livewire\Finder\ContextMenuItem;
 use Cabinet\Filament\Livewire\Finder\FileTypeDto;
 use Cabinet\Filament\Livewire\Finder\SidebarItemDto;
@@ -29,6 +31,7 @@ use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
+use Filament\Support\Facades\FilamentView;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
@@ -58,6 +61,8 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
  */
 class Finder extends Component implements HasForms, HasActions
 {
+    // Before InteractsWithActions: its booted hook must find the registered actions.
+    use InteractsWithRegisteredActions;
     use InteractsWithActions;
     use InteractsWithForms;
     use WithFileUploads;
@@ -352,6 +357,15 @@ class Finder extends Component implements HasForms, HasActions
         $this->selectedFiles = [];
 
         $this->dispatch('cabinet:finder-closed');
+    }
+
+    /**
+     * The folder the finder opened with, for example the folder of a model.
+     * The user can open subfolders, but the root folder stays the same.
+     */
+    public function getRootFolderId(): ?string
+    {
+        return $this->initialFolderId ?? $this->folderId;
     }
 
     public function mount(): void
@@ -906,7 +920,7 @@ class Finder extends Component implements HasForms, HasActions
 
         // Add bulk context menu when files are selected in browse mode
         if (!$this->selectionMode && !empty($this->selectedFiles)) {
-            $menus['bulk'] = [
+            $menus[ContextMenuAction::BULK_MENU] = [
                 ContextMenuItem::fromAction($this->deselectAction)->toArray(),
                 [
                     'label' => '',
@@ -918,7 +932,15 @@ class Finder extends Component implements HasForms, HasActions
             ];
         }
 
-        return $menus;
+        return $menus->map(fn (array $items, string $menu): array => $this->addRegisteredContextMenuActions($items, $menu));
+    }
+
+    /**
+     * Renders a FinderRenderHook with this finder as `$data['finder']`.
+     */
+    public function renderHook(string $name): Htmlable
+    {
+        return FilamentView::renderHook($name, scopes: static::class, data: ['finder' => $this]);
     }
 
     #[Computed]
@@ -949,20 +971,6 @@ class Finder extends Component implements HasForms, HasActions
             'spatie-media' => 'media',
             default => $source,
         };
-    }
-
-    /**
-     * Render extra entries before the files of the current folder, for
-     * example placeholders for files that are still being created.
-     *
-     * Override this in a subclass. Return `<li>` cards for the grid view
-     * and `<tr>` rows for the list view, or null to render nothing.
-     *
-     * @param string $viewMode 'grid' or 'list'
-     */
-    public function renderLeadingEntries(string $viewMode): ?Htmlable
-    {
-        return null;
     }
 
     /**

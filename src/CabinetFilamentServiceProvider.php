@@ -3,6 +3,7 @@
 namespace Cabinet\Filament;
 
 use Cabinet\Filament\Livewire\Finder;
+use Cabinet\Filament\Livewire\Finder\FinderActionRegistry;
 use Filament\Support\Facades\FilamentView;
 use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Package;
@@ -13,6 +14,8 @@ class CabinetFilamentServiceProvider extends PackageServiceProvider
     public function register()
     {
         parent::register();
+
+        $this->app->singleton(FinderActionRegistry::class);
     }
 
     public function boot()
