@@ -27,7 +27,7 @@
         {{-- Upload placeholders --}}
         <x-cabinet-filament::finder.upload-template />
 
-        {{ $this->renderLeadingEntries('grid') }}
+        {{ $this->renderHook(\Cabinet\Filament\View\FinderRenderHook::GRID_ENTRIES_BEFORE) }}
 
         @foreach($files as $file)
             @if ($file instanceof \Cabinet\File)
@@ -107,7 +107,7 @@
                 </tr>
             </thead>
             <tbody>
-                {{ $this->renderLeadingEntries('list') }}
+                {{ $this->renderHook(\Cabinet\Filament\View\FinderRenderHook::LIST_ENTRIES_BEFORE) }}
 
                 @foreach($files as $file)
                     @if ($file instanceof \Cabinet\File)
